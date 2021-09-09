@@ -15,6 +15,11 @@ using iTextSharp;
 using ImageMagick;
 using FreeImageAPI;
 
+using Dynarithmic;
+
+using System.Resources;
+using System.Globalization;
+
 namespace ScanMFC
 {
 	public partial class Form1 : Form
@@ -36,13 +41,42 @@ namespace ScanMFC
 		string PDFInitialDir = "";
 
 		DeviceManager deviceManager;
+		IntPtr pArray; // Массив сканеров для DTWAIN
+
+		private readonly ResourceManager stringManager = new ResourceManager("ru-RU", System.Reflection.Assembly.GetExecutingAssembly());
+
+		int hr = 0;
+		private const int MAX_FILES = 256; // Наибольшее количество файлов за одно сканирование
+
+		private enum WIA_DPS_DOCUMENT_HANDLING_CAPABILITIES
+		{
+			WIA_FEED = 0x01,
+			WIA_FLAT = 0x02,
+			WIA_DUP = 0x04,
+			WIA_DETECT_FLAT = 0x08,
+			WIA_DETECT_SCAN = 0x10,
+			WIA_DETECT_FEED = 0x20,
+			WIA_DETECT_DUP = 0x40,
+			WIA_DETECT_FEED_AVAIL = 0x80,
+			WIA_DETECT_DUP_AVAIL = 0x100
+		}
+
+		private enum WIA_DPS_DOCUMENT_HANDLING_STATUS
+		{
+			WIA_FEED_READY = 0x01,
+			WIA_FLAT_READY = 0x02,
+			WIA_DUP_READY = 0x04,
+			WIA_FLAT_COVER_UP = 0x08,
+			WIA_PATH_COVER_UP = 0x10,
+			WIA_PAPER_JAM = 0x20
+		}
 
 		public Form1()
 		{
 			InitializeComponent();
 		}
 
-		private void button1_Click(object sender, EventArgs e)
+		private void button1_Click_OFF(object sender, EventArgs e)
 		{
 			/*DeviceManager deviceManager = new DeviceManagerClass();
 			for (int i = 1; i <= deviceManager.DeviceInfos.Count; i++)
@@ -154,11 +188,22 @@ namespace ScanMFC
 			//device.Properties["Document Handling Select"].set_Value(5); // 3088
 			int duplex_mode = 2; // Планшет
 
-			//device.Properties["3096"].set_Value(1); // WIA_IPS_PAGES Планшет - 1 страница
+			//device.Properties["Pages"].set_Value(1); // WIA_IPS_PAGES Планшет - 1 страница
+
+			int FeedReady = 0;
+			bool hasMorePages = true;
 
 			if (chkFeeder.Checked)
 			{
-				//device.Properties["3096"].set_Value(0); // Много страниц
+				//device.Properties["Pages"].set_Value(0); // Много страниц
+				foreach (Property property in device.Properties)
+					if ("Document Handling Status" == property.Name) // #define WIA_DPS_DOCUMENT_HANDLING_STATUS                     3087 // 0xc0f
+						FeedReady = (int)property.get_Value();
+				hasMorePages = (FeedReady & (int)WIA_DPS_DOCUMENT_HANDLING_STATUS.WIA_FEED_READY) != 0;
+
+				if (!hasMorePages)
+					toolStripStatus.Text = "Нет документов в автоподатчике";
+
 				if (chkDuplex.Checked)
 					duplex_mode = 5; // Автоподатчик обе стороны
 				else
@@ -192,23 +237,58 @@ namespace ScanMFC
 					System.Diagnostics.Debug.WriteLine(String.Format("{0}\t{1}\t{2}", propertyItem.Name, propertyItem.PropertyID, propertyItem.get_Value()));
 				}
 			}*/
-
-			CommonDialogClass commonDialog = new CommonDialogClass();
+			
+			WIA.CommonDialog commonDialog = new WIA.CommonDialog();
 
 			WIA.ImageProcess imageProcess = new WIA.ImageProcess();  // use to compress jpeg.
 			imageProcess.Filters.Add(imageProcess.FilterInfos["Convert"].FilterID);
-			imageProcess.Filters[1].Properties["FormatID"].set_Value(FormatID.wiaFormatJPEG);
+			imageProcess.Filters[1].Properties["FormatID"].set_Value(ImageFormatID.wiaFormatJPEG);
 			imageProcess.Filters[1].Properties["Quality"].set_Value(trkJpegQuality.Value * 10);
 
 			ImageFile imageFileFront;
 			ImageFile imageFileBack;
 
+			/*int scanCapabilities = 0;
+			foreach (Property property in device.Properties)
+				if ("Document Handling Capabilities" == property.Name)
+					scanCapabilities = (int)property.get_Value();
+			bool WiaFeed = (scanCapabilities & (int)WIA_DPS_DOCUMENT_HANDLING_CAPABILITIES.WIA_FEED) != 0;
+			bool WiaFlat = (scanCapabilities & (int)WIA_DPS_DOCUMENT_HANDLING_CAPABILITIES.WIA_FLAT) != 0;
+			bool WiaDup = (scanCapabilities & (int)WIA_DPS_DOCUMENT_HANDLING_CAPABILITIES.WIA_DUP) != 0;
+			bool WiaDetectFlat = (scanCapabilities & (int)WIA_DPS_DOCUMENT_HANDLING_CAPABILITIES.WIA_DETECT_FLAT) != 0;
+			bool WiaDetectScan = (scanCapabilities & (int)WIA_DPS_DOCUMENT_HANDLING_CAPABILITIES.WIA_DETECT_SCAN) != 0;
+			bool WiaDetectFeed = (scanCapabilities & (int)WIA_DPS_DOCUMENT_HANDLING_CAPABILITIES.WIA_DETECT_FEED) != 0;
+			bool WiaDetectDup = (scanCapabilities & (int)WIA_DPS_DOCUMENT_HANDLING_CAPABILITIES.WIA_DETECT_DUP) != 0;
+			bool WiaDetectFeedAvail = (scanCapabilities & (int)WIA_DPS_DOCUMENT_HANDLING_CAPABILITIES.WIA_DETECT_FEED_AVAIL) != 0;
+			bool WiaDetectDupAvail = (scanCapabilities & (int)WIA_DPS_DOCUMENT_HANDLING_CAPABILITIES.WIA_DETECT_DUP_AVAIL) != 0;
+			MessageBox.Show("WiaFeed: " + WiaFeed.ToString() + "\n" +
+				            "WiaFlat: " + WiaFlat.ToString() + "\n" +
+							"WiaDup: " + WiaDup.ToString() + "\n" +
+							"WiaDetectFlat: " + WiaDetectFlat.ToString() + "\n" +
+							"WiaDetectScan: " + WiaDetectScan.ToString() + "\n" +
+							"WiaDetectFeed: " + WiaDetectFeed.ToString() + "\n" +
+							"WiaDetectDup: " + WiaDetectDup.ToString() + "\n" +
+							"WiaDetectFeedAvail: " + WiaDetectFeedAvail.ToString() + "\n" +
+							"WiaDetectDupAvail: " + WiaDetectDupAvail.ToString());
+			int scanCapacity = 0;
+			foreach (Property property in device.Properties)
+				if ("Document Handling Capacity" == property.Name)
+					scanCapacity = (int)property.get_Value();
+			MessageBox.Show("Document Handling Capacity: " + scanCapacity);*/
+
+			//commonDialog.ShowSelectDevice();
 			try
 			{
-				while (true)
+				while (hasMorePages)
 				{
-					imageFileFront = (ImageFile)commonDialog.ShowTransfer(scanner, FormatID.wiaFormatJPEG, true);
-					//imageFileFront = (ImageFile)scanner.Transfer(FormatID.wiaFormatJPEG);
+					//scanner.Properties["Pages"].set_Value(1);
+
+					imageFileFront = (ImageFile)commonDialog.ShowTransfer(scanner, ImageFormatID.wiaFormatJPEG, true);
+
+					//imageFileFront = commonDialog.ShowAcquireImage(WiaDeviceType.ScannerDeviceType, WiaImageIntent.GrayscaleIntent, WiaImageBias.MinimizeSize, ImageFormatID.wiaFormatJPEG, false, true, true);
+
+					//imageFileFront = (ImageFile)scanner.Transfer(ImageFormatID.wiaFormatJPEG);
+
 					filePathFront = GetFileName(); // Path.GetTempFileName() + ".jpg";
 					imageProcess.Apply(imageFileFront).SaveFile(filePathFront);
 					//imageFileFront.SaveFile(filePathFront);
@@ -225,29 +305,30 @@ namespace ScanMFC
 					if (!chkFeeder.Checked) // Планшет - сканируем только одну страницу
 						break;
 
-					if (chkDuplex.Checked)
+					/*if (chkDuplex.Checked)
 					{
 						imageFileBack = (ImageFile)commonDialog.ShowTransfer(scanner, FormatID.wiaFormatJPEG, true);
-						//imageFileBack = (ImageFile)scanner.Transfer(FormatID.wiaFormatJPEG);
+
 						filePathBack = GetFileName(); // Path.GetTempFileName() + ".jpg";
 						imageProcess.Apply(imageFileBack).SaveFile(filePathBack);
-						//imageFileBack.SaveFile(filePathBack);
+
 						Marshal.ReleaseComObject(imageFileBack);
-						/*thumb = Image.FromFile(filePathBack).GetThumbnailImage(105, 149, () => false, IntPtr.Zero);
 
-						imageList.Images.Add(thumb);
-						listView1.Items.Add(Path.GetFileName(filePathBack));
-						listView1.Items[count].ImageIndex = count++;
-
-						scanFileNames.Add(filePathBack);*/
 						AppendFile(filePathBack);
-					}
+					}*/
+					foreach (Property property in device.Properties)
+						if ("Document Handling Status" == property.Name) // #define WIA_DPS_DOCUMENT_HANDLING_STATUS                     3087 // 0xc0f
+							FeedReady = (int)property.get_Value();
+					hasMorePages = (FeedReady & (int)WIA_DPS_DOCUMENT_HANDLING_STATUS.WIA_FEED_READY) != 0;
 				}
 			}
 			catch (COMException comerr)
 			{
 				switch ((uint)comerr.ErrorCode)
 				{
+					case 0x80210002:
+						toolStripStatus.Text = "Замятие бумаги";
+						break;
 					case 0x80210003:
 						toolStripStatus.Text = "Страницы закончились";
 						break;
@@ -265,6 +346,9 @@ namespace ScanMFC
 						break;
 					case 0x80210001:
 						toolStripStatus.Text = "Неведомая ошибка";
+						break;
+					default:
+						toolStripStatus.Text = String.Format("COMException 0x{0:X}", comerr.ErrorCode);
 						break;
 				}
 			}
@@ -288,6 +372,8 @@ namespace ScanMFC
 			//	File.Delete(file);
 
 			SaveConfig();
+
+			hr = TwainAPI.DTWAIN_SysDestroy();
 		}
 
 		private void Form1_FormClosed(object sender, FormClosedEventArgs e)
@@ -303,9 +389,10 @@ namespace ScanMFC
 			imageList.ImageSize = new Size(71, 100);
 
 			listView1.LargeImageList = imageList;
+			listView1.ListViewItemSorter = new ListViewItemComparer();
 
-			deviceManager = new DeviceManagerClass();
-			for (int i = 1; i <= deviceManager.DeviceInfos.Count; i++)
+			deviceManager = new DeviceManager();
+			/*for (int i = 1; i <= deviceManager.DeviceInfos.Count; i++)
 			{
 				if (deviceManager.DeviceInfos[i].Type != WiaDeviceType.ScannerDeviceType) continue;
 
@@ -316,6 +403,32 @@ namespace ScanMFC
 			{
 				cmbScanners.Items.Add("Сканеры не найдены");
 				button1.Enabled = false; // Отключить кнопку "Сканировать"
+			}*/
+
+			TwainAPI.DTWAIN_SysInitialize();
+
+			pArray = TwainAPI.DTWAIN_ArrayInit();
+			hr = TwainAPI.DTWAIN_EnumSources(ref pArray);
+			int nCountSources = TwainAPI.DTWAIN_ArrayGetCount(pArray);
+
+			if(nCountSources < 1) // Сканеров не найдено
+			{
+				cmbScanners.Items.Add("Сканеры не найдены");
+				button1.Enabled = false; // Отключить кнопку "Сканировать"
+				hr = TwainAPI.DTWAIN_SysDestroy();
+			}
+
+			string prevSourceName = Properties.Settings.Default.ScannerName;
+			IntPtr CurSource = IntPtr.Zero;
+			StringBuilder lpszVer = new StringBuilder(256);
+			for (int i = 0; i < nCountSources; i++)
+			{
+				StringBuilder szName = new StringBuilder(256);
+				hr = TwainAPI.DTWAIN_ArrayGetAt(pArray, i, ref CurSource);
+				hr = TwainAPI.DTWAIN_GetSourceProductName(CurSource, szName, 255);
+				cmbScanners.Items.Add(szName.ToString());
+				if (szName.ToString() == prevSourceName)
+					cmbScanners.SelectedIndex = i;
 			}
 
 			LoadConfig();
@@ -327,6 +440,7 @@ namespace ScanMFC
 			toolTipForm1.SetToolTip(this.btnMoveRight, "Переместить скан вправо");
 			toolTipForm1.SetToolTip(this.btnPDF, "Сохранить выбранные файлы в PDF");
 			toolTipForm1.SetToolTip(this.btnTIFF, "Сохранить выбранные файлы в TIFF");
+
 		}
 
 		private void trkJpegQuality_ValueChanged(object sender, EventArgs e)
@@ -346,13 +460,76 @@ namespace ScanMFC
 
 		private void listView1_DragEnter(object sender, DragEventArgs e)
 		{
+			textBox1.AppendText("listView1_DragEnter\r\n");
 			if (e.Data.GetDataPresent(DataFormats.FileDrop))
 				e.Effect = DragDropEffects.Copy;
+			else
+				e.Effect = DragDropEffects.Move;
 		}
 
 		private void listView1_DragDrop(object sender, DragEventArgs e)
 		{
-			AddFilesToListView((string[])e.Data.GetData(DataFormats.FileDrop));
+			int numItem; // Номер итема, на который перетащили картинку
+			// Притащили новые файлы мышкой из папки
+			if (e.Data.GetDataPresent(DataFormats.FileDrop))
+				AddFilesToListView((string[])e.Data.GetData(DataFormats.FileDrop));
+			// Передвинули существующие картинки
+			if (e.Data.GetDataPresent("System.Windows.Forms.ListViewItem"))
+			{
+				ListViewItem fromItem = e.Data.GetData(typeof(ListViewItem)) as ListViewItem;
+				//ListViewItem copyFromItem = (ListViewItem)fromItem.Clone();
+				textBox1.AppendText("listView1_DragDrop " + fromItem.Index.ToString() + " " + listView1.SelectedItems.Count.ToString());
+				ListViewItem toItem = listView1.GetItemAt(e.X - listView1.Left - this.Left, e.Y - listView1.Top - this.Top);
+				if (null == toItem)
+				{
+					//textBox1.AppendText(" Item index " + listView1.Items.Count.ToString() + "\r\n");
+					numItem = listView1.Items.Count - 1;
+				}
+				else
+				{
+					//textBox1.AppendText(" Item index " + toItem.Index.ToString() + "\r\n");
+					numItem = toItem.Index;
+				}
+				textBox1.AppendText(" numItem  " + numItem.ToString() + "\r\n");
+
+				/*foreach (ListViewItem it in listView1.Items)
+					textBox1.AppendText(it.Text + " = " + it.Index.ToString() + " = " + it.ImageIndex.ToString() + "\r\n");
+				textBox1.AppendText(listView1.Items.Count.ToString() + "\r\n");*/
+
+				listView1.Items.Remove(fromItem);
+
+				/*foreach (ListViewItem it in listView1.Items)
+					textBox1.AppendText(it.Text + " = " + it.Index.ToString() + " = " + it.ImageIndex.ToString() + "\r\n");
+				textBox1.AppendText(listView1.Items.Count.ToString() + "\r\n");*/
+
+				listView1.Items.Insert(numItem, fromItem);
+
+				/*foreach (ListViewItem it in listView1.Items)
+					textBox1.AppendText(it.Text + " = " + it.Index.ToString() + " = " + it.ImageIndex.ToString() + "\r\n");
+				textBox1.AppendText(listView1.Items.Count.ToString() + "\r\n");*/
+
+				//listView1.RedrawItems(0, listView1.Items.Count-1, false);
+				//for (int idx = 0; idx < listView1.Items.Count; idx++)
+				//	listView1.Items[idx].ImageIndex = idx;
+			}
+		}
+
+		private void listView1_ItemDrag(object sender, ItemDragEventArgs e)
+		{
+			ListViewItem lvi = (ListViewItem)e.Item;
+			textBox1.AppendText("listView1_ItemDrag:" + lvi.Index.ToString() + "\r\n");
+			listView1.DoDragDrop((object)lvi, DragDropEffects.Move);
+		}
+
+		private void listView1_DragOver(object sender, DragEventArgs e)
+		{
+			/*if (e.Data.GetDataPresent("System.Windows.Forms.ListViewItem"))
+			{
+				ListViewItem lvi = e.Data.GetData(typeof(ListViewItem)) as ListViewItem;
+				Size offset = Size.Subtract(Cursor.Size, new Size(Cursor.HotSpot.X, Cursor.HotSpot.Y));
+				lvi.Position = Point.Subtract(listView1.PointToClient(new Point(e.X, e.Y)), offset);
+				e.Effect = DragDropEffects.Copy;
+			}*/
 		}
 
 		private void AppendFile(string file)
@@ -362,7 +539,8 @@ namespace ScanMFC
 
 			imageList.Images.Add(thumb);
 			listView1.Items.Add(Path.GetFileName(file));
-			listView1.Items[count].ImageIndex = count++;
+			listView1.Items[count].ImageIndex = imageList.Images.Count - 1;
+			count++;
 			toolStripStatusLabelFilesCount.Text = String.Format("Файлов: {0}", count);
 
 			thumb.Dispose();
@@ -458,9 +636,9 @@ namespace ScanMFC
 			{
 				if (listView1.Items[idx].Selected)
 				{
-					string fileToDelete = scanFileNames[idx];
-					scanFileNames.RemoveAt(idx);
-					imageList.Images.RemoveAt(idx);
+					string fileToDelete = scanFileNames[listView1.Items[idx].ImageIndex];
+					//scanFileNames.RemoveAt(listView1.Items[idx].ImageIndex);
+					//imageList.Images.RemoveAt(idx);
 					listView1.Items.RemoveAt(idx);
 
 					count--;
@@ -468,12 +646,16 @@ namespace ScanMFC
 					if(chkDeleteFiles.Checked) File.Delete(fileToDelete);
 
 					toolStripStatusLabelFilesCount.Text = String.Format("Файлов: {0}", count);
+
+					/*foreach (ListViewItem it in listView1.Items)
+						textBox1.AppendText(it.Text + " = " + it.Index.ToString() + " = " + it.ImageIndex.ToString() + "\r\n");
+					textBox1.AppendText(listView1.Items.Count.ToString() + "\r\n");*/
 				}
 			}
 
 			// Index меняется автоматом, а ImageIndex нужно установить принудительно
-			for (int idx = 0; idx < listView1.Items.Count; idx++)
-				listView1.Items[idx].ImageIndex = idx;
+			/*for (int idx = 0; idx < listView1.Items.Count; idx++)
+				listView1.Items[idx].ImageIndex = idx;*/
 		}
 
 		// Сохраняет выделенные файлы в PDF
@@ -496,7 +678,7 @@ namespace ScanMFC
 				MagickImageCollection images = new MagickImageCollection();
 				foreach (ListViewItem item in listView1.SelectedItems)
 				{
-					images.Add(scanFileNames[item.Index]);
+					images.Add(scanFileNames[item.ImageIndex]);
 					images[s++].Strip(); // Иначе PDF может получиться кривой с ошибкой insufficient data for an image
 				}
 				try
@@ -519,7 +701,7 @@ namespace ScanMFC
 				document.Open();
 				foreach (ListViewItem item in listView1.SelectedItems)
 				{
-					iTextSharp.text.Image image = iTextSharp.text.Image.GetInstance(scanFileNames[item.Index]);
+					iTextSharp.text.Image image = iTextSharp.text.Image.GetInstance(scanFileNames[item.ImageIndex]);
 					image.SetAbsolutePosition(0.0f, 0.0f);
 					image.ScaleToFit(image.Width / image.DpiX * 72f, image.Height / image.DpiY * 72f);
 					iTextSharp.text.Chunk chunk = new iTextSharp.text.Chunk();
@@ -549,7 +731,7 @@ namespace ScanMFC
 
 			bool deleteFiles = chkDeleteFiles.Checked; // Удалять jpeg'и после создания tiff
 
-			savePDFDialog.Filter = "Файлы TIFF|*.tif;*.tiff";
+			savePDFDialog.Filter = stringManager.GetString("Файлы TIFF|*.tif;*.tiff", CultureInfo.CurrentUICulture);
 			savePDFDialog.InitialDirectory = PDFInitialDir;
 			if (DialogResult.OK != savePDFDialog.ShowDialog()) return;
 
@@ -558,15 +740,15 @@ namespace ScanMFC
 			// Вариант с FreeImage - быстро, но сложнее и иногда инвертирует цвета
 
 			// Сохранить первую страницу
-			FIBITMAP dib_color = FreeImage.LoadEx(scanFileNames[listView1.SelectedItems[0].Index]);
+			FIBITMAP dib_color = FreeImage.LoadEx(scanFileNames[listView1.SelectedItems[0].ImageIndex]);
 
 			FIBITMAP dib = FreeImage.ConvertToGreyscale(dib_color);
 			FreeImage.UnloadEx(ref dib_color);
 			if (FREE_IMAGE_COLOR_TYPE.FIC_MINISBLACK == FreeImage.GetColorType(dib))
 				FreeImage.Invert(dib);
 
-			deleteFiles = FreeImage.SaveEx(ref dib, savePDFDialog.FileName, 
-				FREE_IMAGE_FORMAT.FIF_TIFF, FREE_IMAGE_SAVE_FLAGS.TIFF_CCITTFAX4, FREE_IMAGE_COLOR_DEPTH.FICD_01_BPP, true);
+			//deleteFiles =
+			FreeImage.SaveEx(ref dib, savePDFDialog.FileName, FREE_IMAGE_FORMAT.FIF_TIFF, FREE_IMAGE_SAVE_FLAGS.TIFF_CCITTFAX4, FREE_IMAGE_COLOR_DEPTH.FICD_01_BPP_THRESHOLD, true);
 			FreeImage.UnloadEx(ref dib);
 
 			if (listView1.SelectedItems.Count > 1)
@@ -578,32 +760,32 @@ namespace ScanMFC
 				// Добавить остальные страницы
 				for (int i = 1; i < listView1.SelectedItems.Count; i++)
 				{
-					fib_color = FreeImage.LoadEx(scanFileNames[listView1.SelectedItems[i].Index]);
+					fib_color = FreeImage.LoadEx(scanFileNames[listView1.SelectedItems[i].ImageIndex]);
 					fib = FreeImage.ConvertToGreyscale(fib_color);
 					FreeImage.UnloadEx(ref fib_color);
 
 					if (FREE_IMAGE_COLOR_TYPE.FIC_MINISBLACK == FreeImage.GetColorType(fib))
 						FreeImage.Invert(fib);
 
-					FreeImage.SaveEx(ref fib, tmpFile, 
-						FREE_IMAGE_FORMAT.FIF_TIFF, FREE_IMAGE_SAVE_FLAGS.TIFF_CCITTFAX4, FREE_IMAGE_COLOR_DEPTH.FICD_01_BPP, true);
+					FreeImage.SaveEx(ref fib, tmpFile, FREE_IMAGE_FORMAT.FIF_TIFF, FREE_IMAGE_SAVE_FLAGS.TIFF_CCITTFAX4, FREE_IMAGE_COLOR_DEPTH.FICD_01_BPP_THRESHOLD, true);
 					fib = FreeImageAPI.FreeImage.LoadEx(tmpFile);
 
 					FreeImage.AppendPage(fmb, fib);
 					FreeImage.UnloadEx(ref fib);
 					File.Delete(tmpFile);
 				}
-				deleteFiles = FreeImage.CloseMultiBitmapEx(ref fmb);
+				//deleteFiles = 
+				FreeImage.CloseMultiBitmapEx(ref fmb);
 			}
 			
-			/*
+			
 			// Вариант с ImageMagick - проще, но очень медленно
-			int s = 0;
+			/*int s = 0;
 
 			MagickImageCollection images = new MagickImageCollection();
 			foreach (ListViewItem item in listView1.SelectedItems)
 			{
-				images.Add(scanFileNames[item.Index]);
+				images.Add(scanFileNames[item.ImageIndex]);
 				images[s].Strip(); // По аналогии с PDF на всякий случай
 				images[s].Format = MagickFormat.Tif;
 				images[s].Settings.Compression = CompressionMethod.Group4;
@@ -644,7 +826,8 @@ namespace ScanMFC
 
 		private void SaveConfig()
 		{
-			Properties.Settings.Default.Scanner = cmbScanners.SelectedIndex;
+			//Properties.Settings.Default.Scanner = cmbScanners.SelectedIndex;
+			Properties.Settings.Default.ScannerName = cmbScanners.SelectedItem.ToString();
 			Properties.Settings.Default.Color = cmbColor.SelectedIndex;
 			Properties.Settings.Default.Resolution = cmbResolution.SelectedIndex;
 			Properties.Settings.Default.JpegQuality = trkJpegQuality.Value;
@@ -665,7 +848,8 @@ namespace ScanMFC
 
 		private void LoadConfig()
 		{
-			cmbScanners.SelectedIndex = Properties.Settings.Default.Scanner;
+			//cmbScanners.SelectedIndex = Properties.Settings.Default.Scanner;
+			//cmbScanners.SelectedText = Properties.Settings.Default.ScannerName;
 			cmbColor.SelectedIndex = Properties.Settings.Default.Color;
 			cmbResolution.SelectedIndex = Properties.Settings.Default.Resolution;
 			trkJpegQuality.Value = Properties.Settings.Default.JpegQuality;
@@ -692,7 +876,7 @@ namespace ScanMFC
 		{
 			dlgAddFiles.Multiselect = true;
 			dlgAddFiles.InitialDirectory = PDFInitialDir;
-			dlgAddFiles.Filter = "Изображения (*.pdf;*.jpg;*.jpeg)|*.pdf;*.jpg;*.jpeg";
+			dlgAddFiles.Filter = stringManager.GetString("Изображения (*.pdf;*.jpg;*.jpeg)|*.pdf;*.jpg;*.jpeg", CultureInfo.CurrentUICulture);
 			if(DialogResult.OK == dlgAddFiles.ShowDialog())
 			{
 				AddFilesToListView(dlgAddFiles.FileNames);
@@ -855,24 +1039,103 @@ namespace ScanMFC
 			listView1.Items.RemoveAt(oldIdx);
 			listView1.Items.Insert(newIdx, item);
 			listView1.Items[newIdx].Selected = true;
-			listView1.ListViewItemSorter = new ListViewItemComparer(); // Для сортировки элементов по индексу
+			//listView1.ListViewItemSorter = new ListViewItemComparer(); // Для сортировки элементов по индексу
 
-			Image oldImage = (Image)imageList.Images[oldIdx].Clone();
+			/*Image oldImage = (Image)imageList.Images[oldIdx].Clone();
 			imageList.Images[oldIdx] = imageList.Images[newIdx];
 			imageList.Images[newIdx] = oldImage;
 			oldImage.Dispose();
 
 			listView1.Items[oldIdx].ImageIndex = oldIdx;
-			listView1.Items[newIdx].ImageIndex = newIdx;
+			listView1.Items[newIdx].ImageIndex = newIdx;*/
 			//foreach(ListViewItem i in listView1.Items)
 			//	i.ImageIndex = i.Index;
 			
-			string oldFileName = scanFileNames[oldIdx];
+			/*string oldFileName = scanFileNames[oldIdx];
 			scanFileNames[oldIdx] = scanFileNames[newIdx];
-			scanFileNames[newIdx] = oldFileName;
+			scanFileNames[newIdx] = oldFileName;*/
 
 			//listView1.Refresh();
 		}
 
+		private void button2_Click(object sender, EventArgs e)
+		{
+
+		}
+
+		private void button1_Click(object sender, EventArgs e)
+		{
+			if (String.IsNullOrEmpty(txtFileDir.Text))
+			{
+				MessageBox.Show(stringManager.GetString("Выберите путь для отсканированных файлов", CultureInfo.CurrentUICulture));
+				return;
+			}
+
+			int status = 0;
+			//IntPtr SelectedSource = IntPtr.Zero; // = TwainAPI.DTWAIN_SelectSource();
+			IntPtr SelectedSource = TwainAPI.DTWAIN_SelectSourceByName(cmbScanners.SelectedItem.ToString());
+			//hr = TwainAPI.DTWAIN_ArrayGetAt(pArray, cmbScanners.SelectedIndex, ref SelectedSource);
+			hr = TwainAPI.DTWAIN_SetResolution(SelectedSource, float.Parse(cmbResolution.SelectedItem.ToString()));
+			hr = TwainAPI.DTWAIN_EnableFeeder(SelectedSource, chkFeeder.Checked?1:0);
+			hr = TwainAPI.DTWAIN_EnableDuplex(SelectedSource, chkDuplex.Checked?1:0);
+			hr = TwainAPI.DTWAIN_SetPDFJpegQuality(SelectedSource, trkJpegQuality.Value * 10);
+			hr = TwainAPI.DTWAIN_SetBrightness(SelectedSource, trkBrightness.Value * 10.0f);
+			hr = TwainAPI.DTWAIN_SetContrast(SelectedSource, trkContrast.Value * 10.0f);
+						
+			IntPtr aFileNames = TwainAPI.DTWAIN_ArrayCreate(TwainAPI.DTWAIN_ARRAYSTRING, MAX_FILES);
+			for (int i = 0; i < MAX_FILES; i++)
+			{
+				//string s = GetFileName();
+				hr = TwainAPI.DTWAIN_ArraySetAtString(aFileNames, i, GetFileName());
+				//textBox1.AppendText(s + "\r\n");
+			}
+
+			int maxPages = chkFeeder.Checked ? TwainAPI.DTWAIN_ACQUIREALL : 1;
+			// int maxPages = 1;
+			//do
+			//{
+			// string fileName = GetFileName();
+			// hr = TwainAPI.DTWAIN_AcquireFile(SelectedSource, fileName, TwainAPI.DTWAIN_JPEG, TwainAPI.DTWAIN_USENATIVE | TwainAPI.DTWAIN_USELONGNAME, cmbColor.SelectedIndex /*TwainAPI.DTWAIN_PT_DEFAULT*/, maxPages, 0, 1, ref status);
+			hr = TwainAPI.DTWAIN_AcquireFileEx(SelectedSource, (int)aFileNames, TwainAPI.DTWAIN_JPEG, TwainAPI.DTWAIN_USENATIVE | TwainAPI.DTWAIN_USELONGNAME, cmbColor.SelectedIndex, maxPages, 0, 1, ref status);
+
+			StringBuilder fileName = new StringBuilder(256);
+			for (int i = 0; i < MAX_FILES; i++)
+			{
+				
+				hr = TwainAPI.DTWAIN_ArrayGetAtString(aFileNames, i, fileName);
+				textBox1.AppendText(fileName.ToString() + "\r\n");
+				if (File.Exists(fileName.ToString()))
+					AppendFile(fileName.ToString());
+				else
+					break;
+				fileName.Clear();
+			}
+
+			if (status != TwainAPI.DTWAIN_TN_ACQUIREDONE)
+			{
+				StringBuilder lpszVer = new StringBuilder(256);
+				hr = TwainAPI.DTWAIN_GetErrorString(-status, lpszVer, 255);
+				toolStripStatus.Text = lpszVer.ToString();
+				return;
+			}
+
+			hr = TwainAPI.DTWAIN_ArrayDestroy(aFileNames);
+		}
+
+		private void Form1_KeyPress(object sender, KeyPressEventArgs e)
+		{
+			if ((char)13 == e.KeyChar)
+				MessageBox.Show(stringManager.GetString("Press ENTER", CultureInfo.CurrentUICulture));
+			MessageBox.Show(e.KeyChar.ToString());
+		}
+	}
+
+	public static class ImageFormatID
+	{
+		public const string wiaFormatBMP = "{B96B3CAB-0728-11D3-9D7B-0000F81EF32E}";
+		public const string wiaFormatPNG = "{B96B3CAF-0728-11D3-9D7B-0000F81EF32E}";
+		public const string wiaFormatGIF = "{B96B3CB0-0728-11D3-9D7B-0000F81EF32E}";
+		public const string wiaFormatJPEG = "{B96B3CAE-0728-11D3-9D7B-0000F81EF32E}";
+		public const string wiaFormatTIFF = "{B96B3CB1-0728-11D3-9D7B-0000F81EF32E}";
 	}
 }

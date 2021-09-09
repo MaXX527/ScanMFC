@@ -56,6 +56,7 @@
 			this.trkContrast = new System.Windows.Forms.TrackBar();
 			this.trkBrightness = new System.Windows.Forms.TrackBar();
 			this.groupBox3 = new System.Windows.Forms.GroupBox();
+			this.chkDeleteFiles = new System.Windows.Forms.CheckBox();
 			this.btnSelectDir = new System.Windows.Forms.Button();
 			this.txtFileDir = new System.Windows.Forms.TextBox();
 			this.txtFileName = new System.Windows.Forms.TextBox();
@@ -71,10 +72,10 @@
 			this.btnTIFF = new System.Windows.Forms.Button();
 			this.radioiTextSharp = new System.Windows.Forms.RadioButton();
 			this.radioImageMagick = new System.Windows.Forms.RadioButton();
+			this.textBox1 = new System.Windows.Forms.TextBox();
 			this.dlgSelectDir = new System.Windows.Forms.FolderBrowserDialog();
 			this.dlgAddFiles = new System.Windows.Forms.OpenFileDialog();
 			this.toolTipForm1 = new System.Windows.Forms.ToolTip(this.components);
-			this.chkDeleteFiles = new System.Windows.Forms.CheckBox();
 			((System.ComponentModel.ISupportInitialize)(this.trkJpegQuality)).BeginInit();
 			this.statusStrip1.SuspendLayout();
 			this.groupBox1.SuspendLayout();
@@ -91,7 +92,7 @@
 			this.button1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
 			this.button1.Location = new System.Drawing.Point(3, 398);
 			this.button1.Name = "button1";
-			this.button1.Size = new System.Drawing.Size(106, 23);
+			this.button1.Size = new System.Drawing.Size(132, 35);
 			this.button1.TabIndex = 0;
 			this.button1.Text = "Сканировать";
 			this.button1.UseVisualStyleBackColor = true;
@@ -163,8 +164,10 @@
 			this.listView1.Size = new System.Drawing.Size(513, 434);
 			this.listView1.TabIndex = 7;
 			this.listView1.UseCompatibleStateImageBehavior = false;
+			this.listView1.ItemDrag += new System.Windows.Forms.ItemDragEventHandler(this.listView1_ItemDrag);
 			this.listView1.DragDrop += new System.Windows.Forms.DragEventHandler(this.listView1_DragDrop);
 			this.listView1.DragEnter += new System.Windows.Forms.DragEventHandler(this.listView1_DragEnter);
+			this.listView1.DragOver += new System.Windows.Forms.DragEventHandler(this.listView1_DragOver);
 			this.listView1.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.listView1_MouseDoubleClick);
 			// 
 			// trkJpegQuality
@@ -193,7 +196,7 @@
 			this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.toolStripStatus,
             this.toolStripStatusLabelFilesCount});
-			this.statusStrip1.Location = new System.Drawing.Point(0, 515);
+			this.statusStrip1.Location = new System.Drawing.Point(0, 548);
 			this.statusStrip1.Name = "statusStrip1";
 			this.statusStrip1.Size = new System.Drawing.Size(799, 22);
 			this.statusStrip1.TabIndex = 12;
@@ -202,13 +205,13 @@
 			// toolStripStatus
 			// 
 			this.toolStripStatus.Name = "toolStripStatus";
-			this.toolStripStatus.Size = new System.Drawing.Size(38, 17);
+			this.toolStripStatus.Size = new System.Drawing.Size(37, 17);
 			this.toolStripStatus.Text = "Готов";
 			// 
 			// toolStripStatusLabelFilesCount
 			// 
 			this.toolStripStatusLabelFilesCount.Name = "toolStripStatusLabelFilesCount";
-			this.toolStripStatusLabelFilesCount.Size = new System.Drawing.Size(37, 17);
+			this.toolStripStatusLabelFilesCount.Size = new System.Drawing.Size(43, 17);
 			this.toolStripStatusLabelFilesCount.Text = "______";
 			// 
 			// cmbScanners
@@ -335,6 +338,7 @@
 			this.trkContrast.LargeChange = 10;
 			this.trkContrast.Location = new System.Drawing.Point(76, 131);
 			this.trkContrast.Maximum = 100;
+			this.trkContrast.Minimum = -100;
 			this.trkContrast.Name = "trkContrast";
 			this.trkContrast.Size = new System.Drawing.Size(121, 20);
 			this.trkContrast.TabIndex = 10;
@@ -369,6 +373,16 @@
 			this.groupBox3.TabIndex = 18;
 			this.groupBox3.TabStop = false;
 			this.groupBox3.Text = "Настройки файла";
+			// 
+			// chkDeleteFiles
+			// 
+			this.chkDeleteFiles.AutoSize = true;
+			this.chkDeleteFiles.Location = new System.Drawing.Point(13, 91);
+			this.chkDeleteFiles.Name = "chkDeleteFiles";
+			this.chkDeleteFiles.Size = new System.Drawing.Size(200, 17);
+			this.chkDeleteFiles.TabIndex = 5;
+			this.chkDeleteFiles.Text = "Удалять отсканированные файлы";
+			this.chkDeleteFiles.UseVisualStyleBackColor = true;
 			// 
 			// btnSelectDir
 			// 
@@ -423,15 +437,17 @@
 			this.tableLayoutPanel1.Controls.Add(this.groupBox2, 0, 1);
 			this.tableLayoutPanel1.Controls.Add(this.listView1, 1, 1);
 			this.tableLayoutPanel1.Controls.Add(this.groupBox1, 0, 0);
+			this.tableLayoutPanel1.Controls.Add(this.textBox1, 1, 4);
 			this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.tableLayoutPanel1.Location = new System.Drawing.Point(0, 0);
 			this.tableLayoutPanel1.Name = "tableLayoutPanel1";
-			this.tableLayoutPanel1.RowCount = 4;
+			this.tableLayoutPanel1.RowCount = 5;
 			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 75F));
 			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 175F));
 			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 145F));
 			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.tableLayoutPanel1.Size = new System.Drawing.Size(799, 515);
+			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
+			this.tableLayoutPanel1.Size = new System.Drawing.Size(799, 548);
 			this.tableLayoutPanel1.TabIndex = 19;
 			// 
 			// flowLayoutPanel1
@@ -545,21 +561,22 @@
 			this.radioImageMagick.Text = "ImageMagick";
 			this.radioImageMagick.UseVisualStyleBackColor = true;
 			// 
-			// chkDeleteFiles
+			// textBox1
 			// 
-			this.chkDeleteFiles.AutoSize = true;
-			this.chkDeleteFiles.Location = new System.Drawing.Point(13, 91);
-			this.chkDeleteFiles.Name = "chkDeleteFiles";
-			this.chkDeleteFiles.Size = new System.Drawing.Size(200, 17);
-			this.chkDeleteFiles.TabIndex = 5;
-			this.chkDeleteFiles.Text = "Удалять отсканированные файлы";
-			this.chkDeleteFiles.UseVisualStyleBackColor = true;
+			this.textBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.textBox1.Location = new System.Drawing.Point(283, 518);
+			this.textBox1.Multiline = true;
+			this.textBox1.Name = "textBox1";
+			this.textBox1.Size = new System.Drawing.Size(513, 27);
+			this.textBox1.TabIndex = 22;
 			// 
 			// Form1
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(799, 537);
+			this.ClientSize = new System.Drawing.Size(799, 570);
 			this.Controls.Add(this.tableLayoutPanel1);
 			this.Controls.Add(this.statusStrip1);
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
@@ -568,6 +585,7 @@
 			this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
 			this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.Form1_FormClosed);
 			this.Load += new System.EventHandler(this.Form1_Load);
+			this.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.Form1_KeyPress);
 			((System.ComponentModel.ISupportInitialize)(this.trkJpegQuality)).EndInit();
 			this.statusStrip1.ResumeLayout(false);
 			this.statusStrip1.PerformLayout();
@@ -580,6 +598,7 @@
 			this.groupBox3.ResumeLayout(false);
 			this.groupBox3.PerformLayout();
 			this.tableLayoutPanel1.ResumeLayout(false);
+			this.tableLayoutPanel1.PerformLayout();
 			this.flowLayoutPanel1.ResumeLayout(false);
 			this.flowLayoutPanel1.PerformLayout();
 			this.ResumeLayout(false);
@@ -634,6 +653,7 @@
 		private System.Windows.Forms.RadioButton radioImageMagick;
 		private System.Windows.Forms.Button btnTIFF;
 		private System.Windows.Forms.CheckBox chkDeleteFiles;
+		private System.Windows.Forms.TextBox textBox1;
 	}
 }
 
