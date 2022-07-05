@@ -59,5 +59,11 @@
     <Setting Name="ScannerName" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
+    <Setting Name="ShowInterface" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="DSM" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">0</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

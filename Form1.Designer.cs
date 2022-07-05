@@ -41,6 +41,7 @@
 			this.statusStrip1 = new System.Windows.Forms.StatusStrip();
 			this.toolStripStatus = new System.Windows.Forms.ToolStripStatusLabel();
 			this.toolStripStatusLabelFilesCount = new System.Windows.Forms.ToolStripStatusLabel();
+			this.toolStripDSM = new System.Windows.Forms.ToolStripStatusLabel();
 			this.savePDFDialog = new System.Windows.Forms.SaveFileDialog();
 			this.cmbScanners = new System.Windows.Forms.ComboBox();
 			this.groupBox1 = new System.Windows.Forms.GroupBox();
@@ -56,6 +57,9 @@
 			this.trkContrast = new System.Windows.Forms.TrackBar();
 			this.trkBrightness = new System.Windows.Forms.TrackBar();
 			this.groupBox3 = new System.Windows.Forms.GroupBox();
+			this.cmbDSM = new System.Windows.Forms.ComboBox();
+			this.lblDSM = new System.Windows.Forms.Label();
+			this.chkShowInterface = new System.Windows.Forms.CheckBox();
 			this.chkDeleteFiles = new System.Windows.Forms.CheckBox();
 			this.btnSelectDir = new System.Windows.Forms.Button();
 			this.txtFileDir = new System.Windows.Forms.TextBox();
@@ -72,7 +76,6 @@
 			this.btnTIFF = new System.Windows.Forms.Button();
 			this.radioiTextSharp = new System.Windows.Forms.RadioButton();
 			this.radioImageMagick = new System.Windows.Forms.RadioButton();
-			this.textBox1 = new System.Windows.Forms.TextBox();
 			this.dlgSelectDir = new System.Windows.Forms.FolderBrowserDialog();
 			this.dlgAddFiles = new System.Windows.Forms.OpenFileDialog();
 			this.toolTipForm1 = new System.Windows.Forms.ToolTip(this.components);
@@ -90,7 +93,7 @@
 			// button1
 			// 
 			this.button1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-			this.button1.Location = new System.Drawing.Point(3, 398);
+			this.button1.Location = new System.Drawing.Point(3, 428);
 			this.button1.Name = "button1";
 			this.button1.Size = new System.Drawing.Size(132, 35);
 			this.button1.TabIndex = 0;
@@ -161,7 +164,7 @@
 			this.listView1.Location = new System.Drawing.Point(283, 78);
 			this.listView1.Name = "listView1";
 			this.tableLayoutPanel1.SetRowSpan(this.listView1, 3);
-			this.listView1.Size = new System.Drawing.Size(513, 434);
+			this.listView1.Size = new System.Drawing.Size(513, 467);
 			this.listView1.TabIndex = 7;
 			this.listView1.UseCompatibleStateImageBehavior = false;
 			this.listView1.ItemDrag += new System.Windows.Forms.ItemDragEventHandler(this.listView1_ItemDrag);
@@ -195,7 +198,8 @@
 			// 
 			this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.toolStripStatus,
-            this.toolStripStatusLabelFilesCount});
+            this.toolStripStatusLabelFilesCount,
+            this.toolStripDSM});
 			this.statusStrip1.Location = new System.Drawing.Point(0, 548);
 			this.statusStrip1.Name = "statusStrip1";
 			this.statusStrip1.Size = new System.Drawing.Size(799, 22);
@@ -205,14 +209,20 @@
 			// toolStripStatus
 			// 
 			this.toolStripStatus.Name = "toolStripStatus";
-			this.toolStripStatus.Size = new System.Drawing.Size(37, 17);
+			this.toolStripStatus.Size = new System.Drawing.Size(38, 17);
 			this.toolStripStatus.Text = "Готов";
 			// 
 			// toolStripStatusLabelFilesCount
 			// 
 			this.toolStripStatusLabelFilesCount.Name = "toolStripStatusLabelFilesCount";
-			this.toolStripStatusLabelFilesCount.Size = new System.Drawing.Size(43, 17);
+			this.toolStripStatusLabelFilesCount.Size = new System.Drawing.Size(37, 17);
 			this.toolStripStatusLabelFilesCount.Text = "______";
+			// 
+			// toolStripDSM
+			// 
+			this.toolStripDSM.Name = "toolStripDSM";
+			this.toolStripDSM.Size = new System.Drawing.Size(35, 17);
+			this.toolStripDSM.Text = "DSM:";
 			// 
 			// cmbScanners
 			// 
@@ -360,6 +370,9 @@
 			// 
 			// groupBox3
 			// 
+			this.groupBox3.Controls.Add(this.cmbDSM);
+			this.groupBox3.Controls.Add(this.lblDSM);
+			this.groupBox3.Controls.Add(this.chkShowInterface);
 			this.groupBox3.Controls.Add(this.chkDeleteFiles);
 			this.groupBox3.Controls.Add(this.btnSelectDir);
 			this.groupBox3.Controls.Add(this.txtFileDir);
@@ -369,10 +382,42 @@
 			this.groupBox3.FlatStyle = System.Windows.Forms.FlatStyle.System;
 			this.groupBox3.Location = new System.Drawing.Point(3, 253);
 			this.groupBox3.Name = "groupBox3";
-			this.groupBox3.Size = new System.Drawing.Size(274, 127);
+			this.groupBox3.Size = new System.Drawing.Size(274, 169);
 			this.groupBox3.TabIndex = 18;
 			this.groupBox3.TabStop = false;
 			this.groupBox3.Text = "Настройки файла";
+			// 
+			// cmbDSM
+			// 
+			this.cmbDSM.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+			this.cmbDSM.FormattingEnabled = true;
+			this.cmbDSM.Items.AddRange(new object[] {
+            "Version 2",
+            "Legacy"});
+			this.cmbDSM.Location = new System.Drawing.Point(88, 136);
+			this.cmbDSM.Name = "cmbDSM";
+			this.cmbDSM.Size = new System.Drawing.Size(151, 21);
+			this.cmbDSM.TabIndex = 8;
+			this.cmbDSM.SelectedIndexChanged += new System.EventHandler(this.cmbDSM_SelectedIndexChanged);
+			// 
+			// lblDSM
+			// 
+			this.lblDSM.AutoSize = true;
+			this.lblDSM.Location = new System.Drawing.Point(13, 139);
+			this.lblDSM.Name = "lblDSM";
+			this.lblDSM.Size = new System.Drawing.Size(69, 13);
+			this.lblDSM.TabIndex = 7;
+			this.lblDSM.Text = "DSM Version";
+			// 
+			// chkShowInterface
+			// 
+			this.chkShowInterface.AutoSize = true;
+			this.chkShowInterface.Location = new System.Drawing.Point(13, 115);
+			this.chkShowInterface.Name = "chkShowInterface";
+			this.chkShowInterface.Size = new System.Drawing.Size(192, 17);
+			this.chkShowInterface.TabIndex = 6;
+			this.chkShowInterface.Text = "Показывать интерфейс сканера";
+			this.chkShowInterface.UseVisualStyleBackColor = true;
 			// 
 			// chkDeleteFiles
 			// 
@@ -433,20 +478,18 @@
 			this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.tableLayoutPanel1.Controls.Add(this.flowLayoutPanel1, 1, 0);
 			this.tableLayoutPanel1.Controls.Add(this.groupBox3, 0, 2);
-			this.tableLayoutPanel1.Controls.Add(this.button1, 0, 3);
 			this.tableLayoutPanel1.Controls.Add(this.groupBox2, 0, 1);
 			this.tableLayoutPanel1.Controls.Add(this.listView1, 1, 1);
 			this.tableLayoutPanel1.Controls.Add(this.groupBox1, 0, 0);
-			this.tableLayoutPanel1.Controls.Add(this.textBox1, 1, 4);
+			this.tableLayoutPanel1.Controls.Add(this.button1, 0, 3);
 			this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.tableLayoutPanel1.Location = new System.Drawing.Point(0, 0);
 			this.tableLayoutPanel1.Name = "tableLayoutPanel1";
-			this.tableLayoutPanel1.RowCount = 5;
+			this.tableLayoutPanel1.RowCount = 4;
 			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 75F));
 			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 175F));
-			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 145F));
+			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 175F));
 			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
 			this.tableLayoutPanel1.Size = new System.Drawing.Size(799, 548);
 			this.tableLayoutPanel1.TabIndex = 19;
 			// 
@@ -561,17 +604,6 @@
 			this.radioImageMagick.Text = "ImageMagick";
 			this.radioImageMagick.UseVisualStyleBackColor = true;
 			// 
-			// textBox1
-			// 
-			this.textBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-			this.textBox1.Location = new System.Drawing.Point(283, 518);
-			this.textBox1.Multiline = true;
-			this.textBox1.Name = "textBox1";
-			this.textBox1.Size = new System.Drawing.Size(513, 27);
-			this.textBox1.TabIndex = 22;
-			// 
 			// Form1
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -585,7 +617,6 @@
 			this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
 			this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.Form1_FormClosed);
 			this.Load += new System.EventHandler(this.Form1_Load);
-			this.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.Form1_KeyPress);
 			((System.ComponentModel.ISupportInitialize)(this.trkJpegQuality)).EndInit();
 			this.statusStrip1.ResumeLayout(false);
 			this.statusStrip1.PerformLayout();
@@ -598,7 +629,6 @@
 			this.groupBox3.ResumeLayout(false);
 			this.groupBox3.PerformLayout();
 			this.tableLayoutPanel1.ResumeLayout(false);
-			this.tableLayoutPanel1.PerformLayout();
 			this.flowLayoutPanel1.ResumeLayout(false);
 			this.flowLayoutPanel1.PerformLayout();
 			this.ResumeLayout(false);
@@ -653,7 +683,10 @@
 		private System.Windows.Forms.RadioButton radioImageMagick;
 		private System.Windows.Forms.Button btnTIFF;
 		private System.Windows.Forms.CheckBox chkDeleteFiles;
-		private System.Windows.Forms.TextBox textBox1;
+		private System.Windows.Forms.CheckBox chkShowInterface;
+		private System.Windows.Forms.ToolStripStatusLabel toolStripDSM;
+		private System.Windows.Forms.ComboBox cmbDSM;
+		private System.Windows.Forms.Label lblDSM;
 	}
 }
 

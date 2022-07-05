@@ -42,6 +42,7 @@ namespace ScanMFC
 
 		DeviceManager deviceManager;
 		IntPtr pArray; // Массив сканеров для DTWAIN
+		static IntPtr SelectedSource; // Указатель на выбранный сканер
 
 		private readonly ResourceManager stringManager = new ResourceManager("ru-RU", System.Reflection.Assembly.GetExecutingAssembly());
 
@@ -372,7 +373,7 @@ namespace ScanMFC
 			//	File.Delete(file);
 
 			SaveConfig();
-
+			
 			hr = TwainAPI.DTWAIN_SysDestroy();
 		}
 
@@ -433,6 +434,18 @@ namespace ScanMFC
 
 			LoadConfig();
 
+			/*if ((TwainAPI.DTWAIN_GetTwainAvailability() & TwainAPI.DTWAIN_TWAINDSM_VERSION2) > 0)
+			{ // DTWAIN_TWAINDSM_VERSION2
+				TwainAPI.DTWAIN_SetTwainDSM(TwainAPI.DTWAIN_TWAINDSM_VERSION2);
+				toolStripDSM.Text = "DSM: Version 2";
+			}
+			else
+			{
+				TwainAPI.DTWAIN_SetTwainDSM(TwainAPI.DTWAIN_TWAINDSM_LEGACY);
+				toolStripDSM.Text = "DSM: Legacy";
+			}*/
+
+			
 			// Подсказки для элементов управления
 			toolTipForm1.SetToolTip(this.btnAdd, "Добавить файлы изображений");
 			toolTipForm1.SetToolTip(this.btnDelete, "Удалить выбранные файлы");
@@ -460,7 +473,6 @@ namespace ScanMFC
 
 		private void listView1_DragEnter(object sender, DragEventArgs e)
 		{
-			textBox1.AppendText("listView1_DragEnter\r\n");
 			if (e.Data.GetDataPresent(DataFormats.FileDrop))
 				e.Effect = DragDropEffects.Copy;
 			else
@@ -478,7 +490,6 @@ namespace ScanMFC
 			{
 				ListViewItem fromItem = e.Data.GetData(typeof(ListViewItem)) as ListViewItem;
 				//ListViewItem copyFromItem = (ListViewItem)fromItem.Clone();
-				textBox1.AppendText("listView1_DragDrop " + fromItem.Index.ToString() + " " + listView1.SelectedItems.Count.ToString());
 				ListViewItem toItem = listView1.GetItemAt(e.X - listView1.Left - this.Left, e.Y - listView1.Top - this.Top);
 				if (null == toItem)
 				{
@@ -490,7 +501,6 @@ namespace ScanMFC
 					//textBox1.AppendText(" Item index " + toItem.Index.ToString() + "\r\n");
 					numItem = toItem.Index;
 				}
-				textBox1.AppendText(" numItem  " + numItem.ToString() + "\r\n");
 
 				/*foreach (ListViewItem it in listView1.Items)
 					textBox1.AppendText(it.Text + " = " + it.Index.ToString() + " = " + it.ImageIndex.ToString() + "\r\n");
@@ -517,7 +527,6 @@ namespace ScanMFC
 		private void listView1_ItemDrag(object sender, ItemDragEventArgs e)
 		{
 			ListViewItem lvi = (ListViewItem)e.Item;
-			textBox1.AppendText("listView1_ItemDrag:" + lvi.Index.ToString() + "\r\n");
 			listView1.DoDragDrop((object)lvi, DragDropEffects.Move);
 		}
 
@@ -731,7 +740,7 @@ namespace ScanMFC
 
 			bool deleteFiles = chkDeleteFiles.Checked; // Удалять jpeg'и после создания tiff
 
-			savePDFDialog.Filter = stringManager.GetString("Файлы TIFF|*.tif;*.tiff", CultureInfo.CurrentUICulture);
+			savePDFDialog.Filter = "Файлы TIFF|*.tif;*.tiff"; // stringManager.GetString("Файлы TIFF|*.tif;*.tiff", CultureInfo.CurrentUICulture);
 			savePDFDialog.InitialDirectory = PDFInitialDir;
 			if (DialogResult.OK != savePDFDialog.ShowDialog()) return;
 
@@ -843,6 +852,8 @@ namespace ScanMFC
 			Properties.Settings.Default.Contrast = trkContrast.Value;
 			Properties.Settings.Default.UseiTextSharp = radioiTextSharp.Checked;
 			Properties.Settings.Default.DeleteFiles = chkDeleteFiles.Checked;
+			Properties.Settings.Default.ShowInterface = chkShowInterface.Checked;
+			Properties.Settings.Default.DSM = cmbDSM.SelectedIndex;
 			Properties.Settings.Default.Save();
 		}
 
@@ -870,14 +881,16 @@ namespace ScanMFC
 			radioiTextSharp.Checked = Properties.Settings.Default.UseiTextSharp;
 			radioImageMagick.Checked = !Properties.Settings.Default.UseiTextSharp;
 			chkDeleteFiles.Checked = Properties.Settings.Default.DeleteFiles;
+			chkShowInterface.Checked = Properties.Settings.Default.ShowInterface;
+			cmbDSM.SelectedIndex = Properties.Settings.Default.DSM;
 		}
 
 		private void btnAdd_Click(object sender, EventArgs e)
 		{
 			dlgAddFiles.Multiselect = true;
 			dlgAddFiles.InitialDirectory = PDFInitialDir;
-			dlgAddFiles.Filter = stringManager.GetString("Изображения (*.pdf;*.jpg;*.jpeg)|*.pdf;*.jpg;*.jpeg", CultureInfo.CurrentUICulture);
-			if(DialogResult.OK == dlgAddFiles.ShowDialog())
+			dlgAddFiles.Filter = "Изображения (*.pdf;*.jpg;*.jpeg)|*.pdf;*.jpg;*.jpeg"; //stringManager.GetString("Изображения (*.pdf;*.jpg;*.jpeg)|*.pdf;*.jpg;*.jpeg", CultureInfo.CurrentUICulture);
+			if (DialogResult.OK == dlgAddFiles.ShowDialog())
 			{
 				AddFilesToListView(dlgAddFiles.FileNames);
 			}
@@ -1067,13 +1080,15 @@ namespace ScanMFC
 		{
 			if (String.IsNullOrEmpty(txtFileDir.Text))
 			{
-				MessageBox.Show(stringManager.GetString("Выберите путь для отсканированных файлов", CultureInfo.CurrentUICulture));
+				MessageBox.Show("Выберите путь для отсканированных файлов");
 				return;
 			}
 
 			int status = 0;
 			//IntPtr SelectedSource = IntPtr.Zero; // = TwainAPI.DTWAIN_SelectSource();
-			IntPtr SelectedSource = TwainAPI.DTWAIN_SelectSourceByName(cmbScanners.SelectedItem.ToString());
+			SelectedSource = TwainAPI.DTWAIN_SelectSourceByName(cmbScanners.SelectedItem.ToString());
+			if (0 == TwainAPI.DTWAIN_IsSourceOpen(SelectedSource))
+				hr = TwainAPI.DTWAIN_OpenSource(SelectedSource);
 			//hr = TwainAPI.DTWAIN_ArrayGetAt(pArray, cmbScanners.SelectedIndex, ref SelectedSource);
 			hr = TwainAPI.DTWAIN_SetResolution(SelectedSource, float.Parse(cmbResolution.SelectedItem.ToString()));
 			hr = TwainAPI.DTWAIN_EnableFeeder(SelectedSource, chkFeeder.Checked?1:0);
@@ -1081,7 +1096,7 @@ namespace ScanMFC
 			hr = TwainAPI.DTWAIN_SetPDFJpegQuality(SelectedSource, trkJpegQuality.Value * 10);
 			hr = TwainAPI.DTWAIN_SetBrightness(SelectedSource, trkBrightness.Value * 10.0f);
 			hr = TwainAPI.DTWAIN_SetContrast(SelectedSource, trkContrast.Value * 10.0f);
-						
+
 			IntPtr aFileNames = TwainAPI.DTWAIN_ArrayCreate(TwainAPI.DTWAIN_ARRAYSTRING, MAX_FILES);
 			for (int i = 0; i < MAX_FILES; i++)
 			{
@@ -1089,44 +1104,106 @@ namespace ScanMFC
 				hr = TwainAPI.DTWAIN_ArraySetAtString(aFileNames, i, GetFileName());
 				//textBox1.AppendText(s + "\r\n");
 			}
+			fileSuffix -= MAX_FILES;
 
 			int maxPages = chkFeeder.Checked ? TwainAPI.DTWAIN_ACQUIREALL : 1;
+
+			hr = TwainAPI.DTWAIN_SetMaxAcquisitions(SelectedSource, maxPages);
+
 			// int maxPages = 1;
 			//do
 			//{
-			// string fileName = GetFileName();
-			// hr = TwainAPI.DTWAIN_AcquireFile(SelectedSource, fileName, TwainAPI.DTWAIN_JPEG, TwainAPI.DTWAIN_USENATIVE | TwainAPI.DTWAIN_USELONGNAME, cmbColor.SelectedIndex /*TwainAPI.DTWAIN_PT_DEFAULT*/, maxPages, 0, 1, ref status);
-			hr = TwainAPI.DTWAIN_AcquireFileEx(SelectedSource, (int)aFileNames, TwainAPI.DTWAIN_JPEG, TwainAPI.DTWAIN_USENATIVE | TwainAPI.DTWAIN_USELONGNAME, cmbColor.SelectedIndex, maxPages, 0, 1, ref status);
+			//	fName = GetFileName();
+			//	hr = TwainAPI.DTWAIN_AcquireFile(SelectedSource, fName, TwainAPI.DTWAIN_JPEG, TwainAPI.DTWAIN_USENATIVE | TwainAPI.DTWAIN_USELONGNAME, cmbColor.SelectedIndex /*TwainAPI.DTWAIN_PT_DEFAULT*/, maxPages, chkShowInterface.Checked ? 1 : 0, 1, ref status);
+			//	if (File.Exists(fName))
+			//		AppendFile(fName);
+			//} while (status == TwainAPI.DTWAIN_TN_ACQUIREDONE);
+			//return;
 
-			StringBuilder fileName = new StringBuilder(256);
+			hr = TwainAPI.DTWAIN_EnableMsgNotify(1);
+			TwainAPI.DTwainCallback cb = new TwainAPI.DTwainCallback(CaptureTwainProc);
+			TwainAPI.DTWAIN_SetCallback(cb, chkShowInterface.Checked?1:0);
+
+		    hr = TwainAPI.DTWAIN_AcquireFileEx(SelectedSource, (int)aFileNames, TwainAPI.DTWAIN_JPEG, TwainAPI.DTWAIN_USENATIVE | TwainAPI.DTWAIN_USELONGNAME, cmbColor.SelectedIndex, maxPages, chkShowInterface.Checked?1:0, 0, ref status);
+
+			TwainAPI.DTWAIN_SetCallback(null, 0);
+
+			StringBuilder fileName = new StringBuilder(MAX_FILES);
 			for (int i = 0; i < MAX_FILES; i++)
 			{
-				
 				hr = TwainAPI.DTWAIN_ArrayGetAtString(aFileNames, i, fileName);
-				textBox1.AppendText(fileName.ToString() + "\r\n");
 				if (File.Exists(fileName.ToString()))
 					AppendFile(fileName.ToString());
 				else
 					break;
 				fileName.Clear();
+				++fileSuffix;
 			}
+
+			hr = TwainAPI.DTWAIN_ArrayDestroy(aFileNames);
+			//hr = TwainAPI.DTWAIN_CloseSourceUI(SelectedSource);
+			//hr = TwainAPI.DTWAIN_CloseSource(SelectedSource);
 
 			if (status != TwainAPI.DTWAIN_TN_ACQUIREDONE)
 			{
-				StringBuilder lpszVer = new StringBuilder(256);
+				StringBuilder lpszVer = new StringBuilder(MAX_FILES);
 				hr = TwainAPI.DTWAIN_GetErrorString(-status, lpszVer, 255);
 				toolStripStatus.Text = lpszVer.ToString();
 				return;
 			}
-
-			hr = TwainAPI.DTWAIN_ArrayDestroy(aFileNames);
 		}
 
-		private void Form1_KeyPress(object sender, KeyPressEventArgs e)
+		private static int CaptureTwainProc(int wParam, int lParam, int UserData)
 		{
-			if ((char)13 == e.KeyChar)
-				MessageBox.Show(stringManager.GetString("Press ENTER", CultureInfo.CurrentUICulture));
-			MessageBox.Show(e.KeyChar.ToString());
+			// UserData = 1 if chkShowInterface.Checked
+			int hr = 0;
+			switch (wParam)
+			{
+				/* Notification of acquisition being started */
+				case TwainAPI.DTWAIN_TN_ACQUIRESTARTED:
+					break;
+				/* Transfer is about to take place */
+				case TwainAPI.DTWAIN_TN_TRANSFERREADY:
+					break;
+				/* Transfer was done! */
+				case TwainAPI.DTWAIN_TN_TRANSFERDONE:
+					//MessageBox.Show("Transfer was done");
+					break;
+				/* Acquired all pages.  We can get the DIBs! */
+				case TwainAPI.DTWAIN_TN_ACQUIREDONE:
+					//MessageBox.Show("Acquired all pages");
+					if (1 == UserData)
+						hr = TwainAPI.DTWAIN_CloseSourceUI(SelectedSource);
+					break;
+				case TwainAPI.DTWAIN_TN_ACQUIRECANCELLED:
+					//MessageBox.Show("Сканирование отменено");
+					break;
+				case TwainAPI.DTWAIN_TN_ACQUIREFAILED:
+					MessageBox.Show("Сканирование завершилось ошибкой");
+					break;
+				case TwainAPI.DTWAIN_TN_ACQUIRETERMINATED:
+					//MessageBox.Show("Сканирование завершено");
+					break;
+				default:
+					//MessageBox.Show(wParam.ToString());
+					break;
+			}
+			return 1;
+		}
+
+		private void cmbDSM_SelectedIndexChanged(object sender, EventArgs e)
+		{
+			switch (cmbDSM.SelectedIndex)
+			{
+				case 0:
+					hr = TwainAPI.DTWAIN_SetTwainDSM(TwainAPI.DTWAIN_TWAINDSM_VERSION2);
+					toolStripDSM.Text = "DSM: Version 2";
+					break;
+				case 1:
+					hr = TwainAPI.DTWAIN_SetTwainDSM(TwainAPI.DTWAIN_TWAINDSM_LEGACY);
+					toolStripDSM.Text = "DSM: Legacy";
+					break;
+			}
 		}
 	}
 
