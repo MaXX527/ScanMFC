@@ -274,5 +274,29 @@ namespace ScanMFC.Properties {
                 this["DSM"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool bDeskew {
+            get {
+                return ((bool)(this["bDeskew"]));
+            }
+            set {
+                this["bDeskew"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public decimal nDeskew {
+            get {
+                return ((decimal)(this["nDeskew"]));
+            }
+            set {
+                this["nDeskew"] = value;
+            }
+        }
     }
 }

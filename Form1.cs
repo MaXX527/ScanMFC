@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
+//using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Linq;
@@ -18,7 +18,7 @@ using FreeImageAPI;
 using Dynarithmic;
 
 using System.Resources;
-using System.Globalization;
+//using System.Globalization;
 
 namespace ScanMFC
 {
@@ -543,6 +543,15 @@ namespace ScanMFC
 
 		private void AppendFile(string file)
 		{
+			// Выровнять криво отсканированный рисунок
+			if (chkDeskew.Checked)
+			{
+				MagickImage image = new MagickImage(file);
+				image.Deskew(new Percentage((int)numDeskew.Value));
+				image.Write(file);
+				image.Dispose();
+			}
+
 			// Image thumb = Image.FromFile(file); //.GetThumbnailImage(71, 100, () => false, IntPtr.Zero);
 			Bitmap thumb = GetThumbnailImage( file );
 
@@ -854,6 +863,8 @@ namespace ScanMFC
 			Properties.Settings.Default.DeleteFiles = chkDeleteFiles.Checked;
 			Properties.Settings.Default.ShowInterface = chkShowInterface.Checked;
 			Properties.Settings.Default.DSM = cmbDSM.SelectedIndex;
+			Properties.Settings.Default.bDeskew = chkDeskew.Checked;
+			Properties.Settings.Default.nDeskew = numDeskew.Value;
 			Properties.Settings.Default.Save();
 		}
 
@@ -883,6 +894,8 @@ namespace ScanMFC
 			chkDeleteFiles.Checked = Properties.Settings.Default.DeleteFiles;
 			chkShowInterface.Checked = Properties.Settings.Default.ShowInterface;
 			cmbDSM.SelectedIndex = Properties.Settings.Default.DSM;
+			chkDeskew.Checked = Properties.Settings.Default.bDeskew;
+			numDeskew.Value = Properties.Settings.Default.nDeskew;
 		}
 
 		private void btnAdd_Click(object sender, EventArgs e)

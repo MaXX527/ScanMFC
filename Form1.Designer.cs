@@ -57,8 +57,11 @@
 			this.trkContrast = new System.Windows.Forms.TrackBar();
 			this.trkBrightness = new System.Windows.Forms.TrackBar();
 			this.groupBox3 = new System.Windows.Forms.GroupBox();
+			this.lblDeskew = new System.Windows.Forms.Label();
+			this.numDeskew = new System.Windows.Forms.NumericUpDown();
 			this.cmbDSM = new System.Windows.Forms.ComboBox();
 			this.lblDSM = new System.Windows.Forms.Label();
+			this.chkDeskew = new System.Windows.Forms.CheckBox();
 			this.chkShowInterface = new System.Windows.Forms.CheckBox();
 			this.chkDeleteFiles = new System.Windows.Forms.CheckBox();
 			this.btnSelectDir = new System.Windows.Forms.Button();
@@ -86,6 +89,7 @@
 			((System.ComponentModel.ISupportInitialize)(this.trkContrast)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.trkBrightness)).BeginInit();
 			this.groupBox3.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.numDeskew)).BeginInit();
 			this.tableLayoutPanel1.SuspendLayout();
 			this.flowLayoutPanel1.SuspendLayout();
 			this.SuspendLayout();
@@ -93,7 +97,7 @@
 			// button1
 			// 
 			this.button1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-			this.button1.Location = new System.Drawing.Point(3, 428);
+			this.button1.Location = new System.Drawing.Point(3, 453);
 			this.button1.Name = "button1";
 			this.button1.Size = new System.Drawing.Size(132, 35);
 			this.button1.TabIndex = 0;
@@ -370,8 +374,11 @@
 			// 
 			// groupBox3
 			// 
+			this.groupBox3.Controls.Add(this.lblDeskew);
+			this.groupBox3.Controls.Add(this.numDeskew);
 			this.groupBox3.Controls.Add(this.cmbDSM);
 			this.groupBox3.Controls.Add(this.lblDSM);
+			this.groupBox3.Controls.Add(this.chkDeskew);
 			this.groupBox3.Controls.Add(this.chkShowInterface);
 			this.groupBox3.Controls.Add(this.chkDeleteFiles);
 			this.groupBox3.Controls.Add(this.btnSelectDir);
@@ -382,10 +389,31 @@
 			this.groupBox3.FlatStyle = System.Windows.Forms.FlatStyle.System;
 			this.groupBox3.Location = new System.Drawing.Point(3, 253);
 			this.groupBox3.Name = "groupBox3";
-			this.groupBox3.Size = new System.Drawing.Size(274, 169);
+			this.groupBox3.Size = new System.Drawing.Size(274, 194);
 			this.groupBox3.TabIndex = 18;
 			this.groupBox3.TabStop = false;
 			this.groupBox3.Text = "Настройки файла";
+			// 
+			// lblDeskew
+			// 
+			this.lblDeskew.AutoSize = true;
+			this.lblDeskew.Location = new System.Drawing.Point(190, 142);
+			this.lblDeskew.Name = "lblDeskew";
+			this.lblDeskew.Size = new System.Drawing.Size(15, 13);
+			this.lblDeskew.TabIndex = 10;
+			this.lblDeskew.Text = "%";
+			// 
+			// numDeskew
+			// 
+			this.numDeskew.Increment = new decimal(new int[] {
+            10,
+            0,
+            0,
+            0});
+			this.numDeskew.Location = new System.Drawing.Point(149, 138);
+			this.numDeskew.Name = "numDeskew";
+			this.numDeskew.Size = new System.Drawing.Size(38, 20);
+			this.numDeskew.TabIndex = 9;
 			// 
 			// cmbDSM
 			// 
@@ -394,7 +422,7 @@
 			this.cmbDSM.Items.AddRange(new object[] {
             "Version 2",
             "Legacy"});
-			this.cmbDSM.Location = new System.Drawing.Point(88, 136);
+			this.cmbDSM.Location = new System.Drawing.Point(88, 167);
 			this.cmbDSM.Name = "cmbDSM";
 			this.cmbDSM.Size = new System.Drawing.Size(151, 21);
 			this.cmbDSM.TabIndex = 8;
@@ -403,11 +431,21 @@
 			// lblDSM
 			// 
 			this.lblDSM.AutoSize = true;
-			this.lblDSM.Location = new System.Drawing.Point(13, 139);
+			this.lblDSM.Location = new System.Drawing.Point(13, 170);
 			this.lblDSM.Name = "lblDSM";
 			this.lblDSM.Size = new System.Drawing.Size(69, 13);
 			this.lblDSM.TabIndex = 7;
 			this.lblDSM.Text = "DSM Version";
+			// 
+			// chkDeskew
+			// 
+			this.chkDeskew.AutoSize = true;
+			this.chkDeskew.Location = new System.Drawing.Point(13, 138);
+			this.chkDeskew.Name = "chkDeskew";
+			this.chkDeskew.Size = new System.Drawing.Size(117, 17);
+			this.chkDeskew.TabIndex = 6;
+			this.chkDeskew.Text = "Выровнять сканы";
+			this.chkDeskew.UseVisualStyleBackColor = true;
 			// 
 			// chkShowInterface
 			// 
@@ -488,7 +526,7 @@
 			this.tableLayoutPanel1.RowCount = 4;
 			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 75F));
 			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 175F));
-			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 175F));
+			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 200F));
 			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.tableLayoutPanel1.Size = new System.Drawing.Size(799, 548);
 			this.tableLayoutPanel1.TabIndex = 19;
@@ -628,6 +666,7 @@
 			((System.ComponentModel.ISupportInitialize)(this.trkBrightness)).EndInit();
 			this.groupBox3.ResumeLayout(false);
 			this.groupBox3.PerformLayout();
+			((System.ComponentModel.ISupportInitialize)(this.numDeskew)).EndInit();
 			this.tableLayoutPanel1.ResumeLayout(false);
 			this.flowLayoutPanel1.ResumeLayout(false);
 			this.flowLayoutPanel1.PerformLayout();
@@ -687,6 +726,9 @@
 		private System.Windows.Forms.ToolStripStatusLabel toolStripDSM;
 		private System.Windows.Forms.ComboBox cmbDSM;
 		private System.Windows.Forms.Label lblDSM;
+		private System.Windows.Forms.Label lblDeskew;
+		private System.Windows.Forms.NumericUpDown numDeskew;
+		private System.Windows.Forms.CheckBox chkDeskew;
 	}
 }
 
