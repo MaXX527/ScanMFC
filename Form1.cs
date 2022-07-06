@@ -49,6 +49,12 @@ namespace ScanMFC
 		int hr = 0;
 		private const int MAX_FILES = 256; // Наибольшее количество файлов за одно сканирование
 
+		//static StreamWriter w = File.AppendText(@"C:\Temp\scanmfc.log");
+		static IntPtr aFileNames;     // Список имен файлов для сканирования
+		static int numFileName = 0;   // Номер текущего отсканированного файла в массиве aFileNames
+		static string sFileName = ""; // Имя текущего отсканированного файла в массиве aFileNames для передачи в метод AppendFile
+		private static Form1 form1;   // Для вызова метода AppendFile из статического метода CaptureTwainProc
+
 		private enum WIA_DPS_DOCUMENT_HANDLING_CAPABILITIES
 		{
 			WIA_FEED = 0x01,
@@ -75,6 +81,7 @@ namespace ScanMFC
 		public Form1()
 		{
 			InitializeComponent();
+			form1 = this;
 		}
 
 		private void button1_Click_OFF(object sender, EventArgs e)
@@ -373,7 +380,7 @@ namespace ScanMFC
 			//	File.Delete(file);
 
 			SaveConfig();
-			
+
 			hr = TwainAPI.DTWAIN_SysDestroy();
 		}
 
@@ -412,7 +419,7 @@ namespace ScanMFC
 			hr = TwainAPI.DTWAIN_EnumSources(ref pArray);
 			int nCountSources = TwainAPI.DTWAIN_ArrayGetCount(pArray);
 
-			if(nCountSources < 1) // Сканеров не найдено
+			if (nCountSources < 1) // Сканеров не найдено
 			{
 				cmbScanners.Items.Add("Сканеры не найдены");
 				button1.Enabled = false; // Отключить кнопку "Сканировать"
@@ -1110,7 +1117,8 @@ namespace ScanMFC
 			hr = TwainAPI.DTWAIN_SetBrightness(SelectedSource, trkBrightness.Value * 10.0f);
 			hr = TwainAPI.DTWAIN_SetContrast(SelectedSource, trkContrast.Value * 10.0f);
 
-			IntPtr aFileNames = TwainAPI.DTWAIN_ArrayCreate(TwainAPI.DTWAIN_ARRAYSTRING, MAX_FILES);
+			//IntPtr 
+			aFileNames = TwainAPI.DTWAIN_ArrayCreate(TwainAPI.DTWAIN_ARRAYSTRING, MAX_FILES);
 			for (int i = 0; i < MAX_FILES; i++)
 			{
 				//string s = GetFileName();
@@ -1137,11 +1145,13 @@ namespace ScanMFC
 			TwainAPI.DTwainCallback cb = new TwainAPI.DTwainCallback(CaptureTwainProc);
 			TwainAPI.DTWAIN_SetCallback(cb, chkShowInterface.Checked?1:0);
 
-		    hr = TwainAPI.DTWAIN_AcquireFileEx(SelectedSource, (int)aFileNames, TwainAPI.DTWAIN_JPEG, TwainAPI.DTWAIN_USENATIVE | TwainAPI.DTWAIN_USELONGNAME, cmbColor.SelectedIndex, maxPages, chkShowInterface.Checked?1:0, 0, ref status);
+			numFileName = 0;
+			hr = TwainAPI.DTWAIN_AcquireFileEx(SelectedSource, (int)aFileNames, TwainAPI.DTWAIN_JPEG, TwainAPI.DTWAIN_USENATIVE | TwainAPI.DTWAIN_USELONGNAME, cmbColor.SelectedIndex, maxPages, chkShowInterface.Checked?1:0, 0, ref status);
 
 			TwainAPI.DTWAIN_SetCallback(null, 0);
+			hr = TwainAPI.DTWAIN_EnableMsgNotify(0);
 
-			StringBuilder fileName = new StringBuilder(MAX_FILES);
+			/*StringBuilder fileName = new StringBuilder(MAX_FILES);
 			for (int i = 0; i < MAX_FILES; i++)
 			{
 				hr = TwainAPI.DTWAIN_ArrayGetAtString(aFileNames, i, fileName);
@@ -1151,7 +1161,7 @@ namespace ScanMFC
 					break;
 				fileName.Clear();
 				++fileSuffix;
-			}
+			}*/
 
 			hr = TwainAPI.DTWAIN_ArrayDestroy(aFileNames);
 			//hr = TwainAPI.DTWAIN_CloseSourceUI(SelectedSource);
@@ -1159,7 +1169,7 @@ namespace ScanMFC
 
 			if (status != TwainAPI.DTWAIN_TN_ACQUIREDONE)
 			{
-				StringBuilder lpszVer = new StringBuilder(MAX_FILES);
+				StringBuilder lpszVer = new StringBuilder(256);
 				hr = TwainAPI.DTWAIN_GetErrorString(-status, lpszVer, 255);
 				toolStripStatus.Text = lpszVer.ToString();
 				return;
@@ -1168,6 +1178,7 @@ namespace ScanMFC
 
 		private static int CaptureTwainProc(int wParam, int lParam, int UserData)
 		{
+			//w.Write(String.Format("wParam = {0} lParam = {1} UserData = {2}", wParam, lParam, UserData));
 			// UserData = 1 if chkShowInterface.Checked
 			int hr = 0;
 			switch (wParam)
@@ -1197,11 +1208,24 @@ namespace ScanMFC
 				case TwainAPI.DTWAIN_TN_ACQUIRETERMINATED:
 					//MessageBox.Show("Сканирование завершено");
 					break;
+				case TwainAPI.DTWAIN_TN_FILEPAGESAVEOK:
+					StringBuilder pStr = new StringBuilder(256);
+					hr = TwainAPI.DTWAIN_ArrayGetAtString(aFileNames, numFileName++, pStr);
+					sFileName = pStr.ToString();
+
+					if (File.Exists(sFileName))
+						form1.AppendFile(sFileName);
+					else
+						break;
+					pStr.Clear();
+					++fileSuffix;
+					break;
 				default:
 					//MessageBox.Show(wParam.ToString());
 					break;
 			}
 			return 1;
+			//w.Close();
 		}
 
 		private void cmbDSM_SelectedIndexChanged(object sender, EventArgs e)
