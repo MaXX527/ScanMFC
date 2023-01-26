@@ -10,6 +10,7 @@ using WIA;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 
 using iTextSharp;
 using ImageMagick;
@@ -54,6 +55,10 @@ namespace ScanMFC
 		static int numFileName = 0;   // Номер текущего отсканированного файла в массиве aFileNames
 		static string sFileName = ""; // Имя текущего отсканированного файла в массиве aFileNames для передачи в метод AppendFile
 		private static Form1 form1;   // Для вызова метода AppendFile из статического метода CaptureTwainProc
+									  //private static bool bFileReady = false;    // Когда true - файл готов и надо его обработать и добавить на форму
+		private static bool bStopAtError = false; // Если после сканирования status != 1000, завершить цикл обработки из-за какой-то ошибки
+		private static bool bAcquireDone = false;  // Когда true - сканирование закончено и цикл обработки можно прервать
+		private static int countAcquired = 0;
 
 		private enum WIA_DPS_DOCUMENT_HANDLING_CAPABILITIES
 		{
@@ -245,7 +250,7 @@ namespace ScanMFC
 					System.Diagnostics.Debug.WriteLine(String.Format("{0}\t{1}\t{2}", propertyItem.Name, propertyItem.PropertyID, propertyItem.get_Value()));
 				}
 			}*/
-			
+
 			WIA.CommonDialog commonDialog = new WIA.CommonDialog();
 
 			WIA.ImageProcess imageProcess = new WIA.ImageProcess();  // use to compress jpeg.
@@ -371,6 +376,8 @@ namespace ScanMFC
 
 		private void Form1_FormClosing(object sender, FormClosingEventArgs e)
 		{
+			//w.Close();
+
 			//pictureBox1.Image = null;
 
 			imageList.Dispose();
@@ -452,7 +459,7 @@ namespace ScanMFC
 				toolStripDSM.Text = "DSM: Legacy";
 			}*/
 
-			
+
 			// Подсказки для элементов управления
 			toolTipForm1.SetToolTip(this.btnAdd, "Добавить файлы изображений");
 			toolTipForm1.SetToolTip(this.btnDelete, "Удалить выбранные файлы");
@@ -489,7 +496,7 @@ namespace ScanMFC
 		private void listView1_DragDrop(object sender, DragEventArgs e)
 		{
 			int numItem; // Номер итема, на который перетащили картинку
-			// Притащили новые файлы мышкой из папки
+						 // Притащили новые файлы мышкой из папки
 			if (e.Data.GetDataPresent(DataFormats.FileDrop))
 				AddFilesToListView((string[])e.Data.GetData(DataFormats.FileDrop));
 			// Передвинули существующие картинки
@@ -548,19 +555,43 @@ namespace ScanMFC
 			}*/
 		}
 
+		// https://stackoverflow.com/questions/1406808/wait-for-file-to-be-freed-by-process
+		private bool IsFileReady(string filename)
+		{
+			// If the file can be opened for exclusive access it means that the file
+			// is no longer locked by another process.
+			try
+			{
+				using (FileStream inputStream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.None))
+					return inputStream.Length > 0;
+			}
+			catch (Exception)
+			{
+				return false;
+			}
+		}
+
 		private void AppendFile(string file)
 		{
+			// Ждем пока появится отсканированный файл
+			//while (!File.Exists(file))
+			//{ w.WriteLine("File " + file + " not exists"); }
+			// Подождать освобождения файла, вдруг сканер его еще не дописал
+			//while (!form1.IsFileReady(file))
+			//{ w.WriteLine("File " + file + " locked"); }
+			//w.WriteLine(String.Format("sFileName = {0}, file = {1}, numFileName = {2}", sFileName, file, numFileName));
+
 			// Выровнять криво отсканированный рисунок
-			if (chkDeskew.Checked)
+			/*if (chkDeskew.Checked)
 			{
 				MagickImage image = new MagickImage(file);
 				image.Deskew(new Percentage((int)numDeskew.Value));
 				image.Write(file);
 				image.Dispose();
-			}
+			}*/
 
 			// Image thumb = Image.FromFile(file); //.GetThumbnailImage(71, 100, () => false, IntPtr.Zero);
-			Bitmap thumb = GetThumbnailImage( file );
+			Bitmap thumb = GetThumbnailImage(file);
 
 			imageList.Images.Add(thumb);
 			listView1.Items.Add(Path.GetFileName(file));
@@ -578,38 +609,41 @@ namespace ScanMFC
 		/// </summary>
 		/// <param name="filePath"></param>
 		/// <returns></returns>
-		private Bitmap GetThumbnailImage(string filePath /*Image img*/)
+		private static Bitmap GetThumbnailImage(string filePath /*Image img*/)
 		{
-			Image img = Image.FromFile(filePath);
-			int imgWidth = 71;
-			int imgHeight = 100;
-			int yOffset = 0;
-			int xOffset = 0;
-
-			Bitmap bmp = new Bitmap(imgWidth, imgHeight);
-			Graphics g = Graphics.FromImage(bmp);
-			g.Clear(Color.White);
-
-			float ratio = (float)img.Width / (float)img.Height;
-			if (ratio > 0.71f) // Рисунок слишком широкий
+			using (Image img = Image.FromFile(filePath))
 			{
-				imgWidth = 71;
-				imgHeight = (int) (imgWidth / ratio);
-				yOffset = (int) ((100 - imgHeight) / 2);
-			}
-			else // Рисунок слишком узкий
-			{
-				imgHeight = 100;
-				imgWidth = (int) (imgHeight* ratio);
-				xOffset = (int) ((71 - imgWidth) / 2);
-			}
+				int imgWidth = 71;
+				int imgHeight = 100;
+				int yOffset = 0;
+				int xOffset = 0;
 
-			g.DrawImage(img, xOffset, yOffset, imgWidth, imgHeight);
 
-			//imageList.Images[idx] = bmp;
-			//bmp.Dispose();
-			img.Dispose();
-			return bmp;
+				Bitmap bmp = new Bitmap(imgWidth, imgHeight);
+				Graphics g = Graphics.FromImage(bmp);
+				g.Clear(Color.White);
+
+				float ratio = (float)img.Width / (float)img.Height;
+				if (ratio > 0.71f) // Рисунок слишком широкий
+				{
+					imgWidth = 71;
+					imgHeight = (int)(imgWidth / ratio);
+					yOffset = (int)((100 - imgHeight) / 2);
+				}
+				else // Рисунок слишком узкий
+				{
+					imgHeight = 100;
+					imgWidth = (int)(imgHeight * ratio);
+					xOffset = (int)((71 - imgWidth) / 2);
+				}
+
+				g.DrawImage(img, xOffset, yOffset, imgWidth, imgHeight);
+
+				//imageList.Images[idx] = bmp;
+				//bmp.Dispose();
+				img.Dispose();
+				return bmp;
+			}
 		}
 
 		// Открывает рисунок для редактирования
@@ -621,7 +655,7 @@ namespace ScanMFC
 				// Коируем картинку во временный файл, вдруг пользователь отменит редактирование
 				filePath = Path.GetTempPath() + Path.GetFileName(scanFileNames[idx]);
 				File.Copy(scanFileNames[idx], filePath, true);
-			
+
 				FormEdit formEdit = new FormEdit()
 				{
 					Visible = false
@@ -657,7 +691,7 @@ namespace ScanMFC
 		private void btnDelete_Click(object sender, EventArgs e)
 		{
 			//foreach(ListViewItem item in listView1.SelectedItems)
-			for (int idx = listView1.Items.Count - 1; idx >= 0;  idx--)
+			for (int idx = listView1.Items.Count - 1; idx >= 0; idx--)
 			{
 				if (listView1.Items[idx].Selected)
 				{
@@ -668,7 +702,7 @@ namespace ScanMFC
 
 					count--;
 
-					if(chkDeleteFiles.Checked) File.Delete(fileToDelete);
+					if (chkDeleteFiles.Checked) File.Delete(fileToDelete);
 
 					toolStripStatusLabelFilesCount.Text = String.Format("Файлов: {0}", count);
 
@@ -710,7 +744,7 @@ namespace ScanMFC
 				{
 					images.Write(savePDFDialog.FileName, MagickFormat.Pdf);
 				}
-				catch(MagickException me)
+				catch (MagickException me)
 				{
 					toolStripStatus.Text = me.Message;
 					deleteFiles = false;
@@ -731,8 +765,8 @@ namespace ScanMFC
 					image.ScaleToFit(image.Width / image.DpiX * 72f, image.Height / image.DpiY * 72f);
 					iTextSharp.text.Chunk chunk = new iTextSharp.text.Chunk();
 					chunk.SetNewPage();
-					if(s > 0) document.Add(chunk);
-					if(deleteFiles & !document.Add(image)) deleteFiles = false;
+					if (s > 0) document.Add(chunk);
+					if (deleteFiles & !document.Add(image)) deleteFiles = false;
 					chunk = null;
 					image = null;
 					s++;
@@ -761,7 +795,7 @@ namespace ScanMFC
 			if (DialogResult.OK != savePDFDialog.ShowDialog()) return;
 
 			Cursor.Current = Cursors.WaitCursor;
-			
+
 			// Вариант с FreeImage - быстро, но сложнее и иногда инвертирует цвета
 
 			// Сохранить первую страницу
@@ -802,8 +836,8 @@ namespace ScanMFC
 				//deleteFiles = 
 				FreeImage.CloseMultiBitmapEx(ref fmb);
 			}
-			
-			
+
+
 			// Вариант с ImageMagick - проще, но очень медленно
 			/*int s = 0;
 
@@ -835,7 +869,7 @@ namespace ScanMFC
 
 		private void btnSelectDir_Click(object sender, EventArgs e)
 		{
-			if(DialogResult.OK == dlgSelectDir.ShowDialog())
+			if (DialogResult.OK == dlgSelectDir.ShowDialog())
 			{
 				txtFileDir.Text = dlgSelectDir.SelectedPath;
 			}
@@ -844,7 +878,7 @@ namespace ScanMFC
 		private string GetFileName()
 		{
 			string file = txtFileDir.Text + "\\" + txtFileName.Text + String.Format("_{0:000}", fileSuffix++) + ".jpg";
-			while(File.Exists(file))
+			while (File.Exists(file))
 				file = txtFileDir.Text + "\\" + txtFileName.Text + String.Format("_{0:000}", fileSuffix++) + ".jpg";
 			return file;
 		}
@@ -870,7 +904,7 @@ namespace ScanMFC
 			Properties.Settings.Default.DeleteFiles = chkDeleteFiles.Checked;
 			Properties.Settings.Default.ShowInterface = chkShowInterface.Checked;
 			Properties.Settings.Default.DSM = cmbDSM.SelectedIndex;
-			Properties.Settings.Default.bDeskew = chkDeskew.Checked;
+			//Properties.Settings.Default.bDeskew = chkDeskew.Checked;
 			Properties.Settings.Default.nDeskew = numDeskew.Value;
 			Properties.Settings.Default.Save();
 		}
@@ -901,7 +935,7 @@ namespace ScanMFC
 			chkDeleteFiles.Checked = Properties.Settings.Default.DeleteFiles;
 			chkShowInterface.Checked = Properties.Settings.Default.ShowInterface;
 			cmbDSM.SelectedIndex = Properties.Settings.Default.DSM;
-			chkDeskew.Checked = Properties.Settings.Default.bDeskew;
+			//chkDeskew.Checked = Properties.Settings.Default.bDeskew;
 			numDeskew.Value = Properties.Settings.Default.nDeskew;
 		}
 
@@ -955,10 +989,10 @@ namespace ScanMFC
 					string jpegFileName = String.Format(@"{0}\{1}_{2}%02d.jpg", txtFileDir.Text, Path.GetFileNameWithoutExtension(f), salt);
 					string args = String.Format("-dBATCH -dNOPAUSE -dSAFER -sDEVICE=jpeg -dJPEGQ={0} -r{1} -dPDFFitPage -dFIXEDMEDIA -sDEFAULTPAPERSIZE=a4 -sOutputFile=\"{2}\" \"{3}\"",
 						trkJpegQuality.Value * 10, int.Parse(cmbResolution.SelectedItem.ToString()), jpegFileName, f);
-					if(ExecuteCommandAsync(args))
-						foreach(string fileName in Directory.GetFiles(txtFileDir.Text, Path.GetFileNameWithoutExtension(f) + "_*.jpg"))
+					if (ExecuteCommandAsync(args))
+						foreach (string fileName in Directory.GetFiles(txtFileDir.Text, Path.GetFileNameWithoutExtension(f) + "_*.jpg"))
 							AppendFile(fileName);
-		
+
 				}
 			}
 			Cursor.Current = Cursors.Default;
@@ -1083,7 +1117,7 @@ namespace ScanMFC
 			listView1.Items[newIdx].ImageIndex = newIdx;*/
 			//foreach(ListViewItem i in listView1.Items)
 			//	i.ImageIndex = i.Index;
-			
+
 			/*string oldFileName = scanFileNames[oldIdx];
 			scanFileNames[oldIdx] = scanFileNames[newIdx];
 			scanFileNames[newIdx] = oldFileName;*/
@@ -1111,8 +1145,8 @@ namespace ScanMFC
 				hr = TwainAPI.DTWAIN_OpenSource(SelectedSource);
 			//hr = TwainAPI.DTWAIN_ArrayGetAt(pArray, cmbScanners.SelectedIndex, ref SelectedSource);
 			hr = TwainAPI.DTWAIN_SetResolution(SelectedSource, float.Parse(cmbResolution.SelectedItem.ToString()));
-			hr = TwainAPI.DTWAIN_EnableFeeder(SelectedSource, chkFeeder.Checked?1:0);
-			hr = TwainAPI.DTWAIN_EnableDuplex(SelectedSource, chkDuplex.Checked?1:0);
+			hr = TwainAPI.DTWAIN_EnableFeeder(SelectedSource, chkFeeder.Checked ? 1 : 0);
+			hr = TwainAPI.DTWAIN_EnableDuplex(SelectedSource, chkDuplex.Checked ? 1 : 0);
 			hr = TwainAPI.DTWAIN_SetPDFJpegQuality(SelectedSource, trkJpegQuality.Value * 10);
 			hr = TwainAPI.DTWAIN_SetBrightness(SelectedSource, trkBrightness.Value * 10.0f);
 			hr = TwainAPI.DTWAIN_SetContrast(SelectedSource, trkContrast.Value * 10.0f);
@@ -1143,11 +1177,15 @@ namespace ScanMFC
 
 			hr = TwainAPI.DTWAIN_EnableMsgNotify(1);
 			TwainAPI.DTwainCallback cb = new TwainAPI.DTwainCallback(CaptureTwainProc);
-			TwainAPI.DTWAIN_SetCallback(cb, chkShowInterface.Checked?1:0);
+			TwainAPI.DTWAIN_SetCallback(cb, chkShowInterface.Checked ? 1 : 0);
 
 			numFileName = 0;
-			hr = TwainAPI.DTWAIN_AcquireFileEx(SelectedSource, (int)aFileNames, TwainAPI.DTWAIN_JPEG, TwainAPI.DTWAIN_USENATIVE | TwainAPI.DTWAIN_USELONGNAME, cmbColor.SelectedIndex, maxPages, chkShowInterface.Checked?1:0, 0, ref status);
-
+			bAcquireDone = false;
+			bStopAtError = false;
+			//Thread th = new Thread(new ThreadStart(AddScanThread));
+			//th.Start();
+			hr = TwainAPI.DTWAIN_AcquireFileEx(SelectedSource, (int)aFileNames, TwainAPI.DTWAIN_JPEG, TwainAPI.DTWAIN_USENATIVE | TwainAPI.DTWAIN_USELONGNAME, cmbColor.SelectedIndex, maxPages, chkShowInterface.Checked ? 1 : 0, 0, ref status);
+			//bAcquireDone = true;
 			TwainAPI.DTWAIN_SetCallback(null, 0);
 			hr = TwainAPI.DTWAIN_EnableMsgNotify(0);
 
@@ -1163,22 +1201,34 @@ namespace ScanMFC
 				++fileSuffix;
 			}*/
 
-			hr = TwainAPI.DTWAIN_ArrayDestroy(aFileNames);
+			//hr = TwainAPI.DTWAIN_ArrayDestroy(aFileNames);
 			//hr = TwainAPI.DTWAIN_CloseSourceUI(SelectedSource);
 			//hr = TwainAPI.DTWAIN_CloseSource(SelectedSource);
 
 			if (status != TwainAPI.DTWAIN_TN_ACQUIREDONE)
 			{
-				StringBuilder lpszVer = new StringBuilder(256);
-				hr = TwainAPI.DTWAIN_GetErrorString(-status, lpszVer, 255);
-				toolStripStatus.Text = lpszVer.ToString();
+				bStopAtError = true;
+				switch (status)
+				{
+					case TwainAPI.DTWAIN_TN_ACQUIREFAILED:
+						toolStripStatus.Text = "ACQUIREFAILED";
+						break;
+					case TwainAPI.DTWAIN_TN_ACQUIRECANCELLED:
+						toolStripStatus.Text = "ACQUIRECANCELLED";
+						break;
+					default:
+						StringBuilder lpszVer = new StringBuilder(256);
+						hr = TwainAPI.DTWAIN_GetErrorString(status, lpszVer, 255);
+						toolStripStatus.Text = lpszVer.ToString();
+						break;
+				}
 				return;
 			}
 		}
 
 		private static int CaptureTwainProc(int wParam, int lParam, int UserData)
 		{
-			//w.Write(String.Format("wParam = {0} lParam = {1} UserData = {2}", wParam, lParam, UserData));
+			//w.WriteLine(String.Format("wParam = {0}", wParam));
 			// UserData = 1 if chkShowInterface.Checked
 			int hr = 0;
 			switch (wParam)
@@ -1192,31 +1242,80 @@ namespace ScanMFC
 				/* Transfer was done! */
 				case TwainAPI.DTWAIN_TN_TRANSFERDONE:
 					//MessageBox.Show("Transfer was done");
+					//hr = TwainAPI.DTWAIN_CloseSourceUI(SelectedSource);
 					break;
 				/* Acquired all pages.  We can get the DIBs! */
 				case TwainAPI.DTWAIN_TN_ACQUIREDONE:
 					//MessageBox.Show("Acquired all pages");
-					if (1 == UserData)
-						hr = TwainAPI.DTWAIN_CloseSourceUI(SelectedSource);
+					//if (1 == UserData)
+					hr = TwainAPI.DTWAIN_CloseSourceUI(SelectedSource);
+					bAcquireDone = true;
+					countAcquired = 0;
+					hr = TwainAPI.DTWAIN_ArrayDestroy(aFileNames);
 					break;
 				case TwainAPI.DTWAIN_TN_ACQUIRECANCELLED:
-					//MessageBox.Show("Сканирование отменено");
+					bStopAtError = true;
+					hr = TwainAPI.DTWAIN_CloseSourceUI(SelectedSource);
 					break;
 				case TwainAPI.DTWAIN_TN_ACQUIREFAILED:
-					MessageBox.Show("Сканирование завершилось ошибкой");
+					bStopAtError = true;
+					hr = TwainAPI.DTWAIN_CloseSourceUI(SelectedSource);
 					break;
 				case TwainAPI.DTWAIN_TN_ACQUIRETERMINATED:
-					//MessageBox.Show("Сканирование завершено");
+					bStopAtError = true;
+					hr = TwainAPI.DTWAIN_CloseSourceUI(SelectedSource);
 					break;
 				case TwainAPI.DTWAIN_TN_FILEPAGESAVEOK:
 					StringBuilder pStr = new StringBuilder(256);
 					hr = TwainAPI.DTWAIN_ArrayGetAtString(aFileNames, numFileName++, pStr);
 					sFileName = pStr.ToString();
 
-					if (File.Exists(sFileName))
-						form1.AppendFile(sFileName);
-					else
-						break;
+					//form1.AppendFile(sFileName);
+
+					Task tskAdd = new Task(() =>
+					{
+						string sFile = sFileName;
+						// Ждем пока появится отсканированный файл
+						while (!File.Exists(sFile))
+						{
+							if (bStopAtError) { return; }
+							Thread.Sleep(10);
+						}
+						// Подождать освобождения файла, вдруг сканер его еще не дописал
+						while (!form1.IsFileReady(sFile))
+						{
+							if (bStopAtError) { return; }
+							Thread.Sleep(10);
+						}
+
+						// Выровнять криво отсканированный рисунок
+						/*if (form1.chkDeskew.Checked)
+						{
+							MagickImage image = new MagickImage(sFile);
+							image.Deskew(new Percentage((int)form1.numDeskew.Value));
+							image.Write(sFile);
+							image.Dispose();
+						}*/
+
+						Bitmap thumb = GetThumbnailImage(sFile);
+
+						form1.listView1.Invoke(new Action(() => form1.imageList.Images.Add(thumb)));
+						form1.listView1.Invoke(new Action(() => form1.listView1.Items.Add(Path.GetFileName(sFile))));
+						form1.listView1.Invoke(new Action(() => form1.listView1.Items[count].ImageIndex = form1.imageList.Images.Count - 1));
+						//ListView1Add(sFile);
+						count++;
+						form1.Invoke(new Action(() => form1.toolStripStatusLabelFilesCount.Text = String.Format("Файлов: {0}", count)));
+
+						thumb.Dispose();
+
+						form1.scanFileNames.Add(sFile);
+					});
+					tskAdd.Start();
+
+					countAcquired++;
+					form1.toolStripMsg.Text = String.Format("bAcquireDone={0} numFileName={1} countAcquired={2}", bAcquireDone, numFileName, countAcquired);
+					//bFileReady = true;
+
 					pStr.Clear();
 					++fileSuffix;
 					break;
@@ -1227,6 +1326,80 @@ namespace ScanMFC
 			return 1;
 			//w.Close();
 		}
+
+		// Процедура добваления отсканированных файлов по мере готовности
+		/*private static void AddScanThread()
+		{
+			int hres;
+			do
+			{
+				if (bStopAtError) { break; }
+				//if (bFileReady)
+				//{
+				StringBuilder pStr = new StringBuilder(256);
+				hres = TwainAPI.DTWAIN_ArrayGetAtString(aFileNames, numFileName++, pStr);
+				sFileName = pStr.ToString();
+
+				//w.WriteLine(String.Format("sFileName = {0}, numFileName = {1}", sFileName, numFileName));
+
+				// Ждем пока появится отсканированный файл
+				while (!File.Exists(sFileName))
+				{
+					if (bStopAtError) { return; }
+					Thread.Sleep(10);
+				}
+				// Подождать освобождения файла, вдруг сканер его еще не дописал
+				while (!form1.IsFileReady(sFileName))
+				{
+					if (bStopAtError) { return; }
+					Thread.Sleep(10);
+				}
+
+				
+				// Выровнять криво отсканированный рисунок
+				if (form1.chkDeskew.Checked)
+				{
+					MagickImage image = new MagickImage(sFileName);
+					image.Deskew(new Percentage((int)form1.numDeskew.Value));
+					image.Write(sFileName);
+					image.Dispose();
+				}
+				
+				Bitmap thumb = GetThumbnailImage(sFileName);
+				
+				form1.listView1.Invoke(new Action(() => form1.imageList.Images.Add(thumb)));
+				form1.listView1.Invoke(new Action(() => form1.listView1.Items.Add(Path.GetFileName(sFileName))));
+				form1.listView1.Invoke(new Action(() => form1.listView1.Items[count].ImageIndex = form1.imageList.Images.Count - 1));
+				//ListView1Add(sFileName);
+				count++;
+				form1.toolStripStatusLabelFilesCount.Text = String.Format("Файлов: {0}", count);
+
+				thumb.Dispose();
+
+				form1.scanFileNames.Add(sFileName);
+				pStr.Clear();
+				++fileSuffix;
+				//bFileReady = false;
+				//}
+				//Thread.Sleep(200);
+				//w.WriteLine(String.Format("?{0} {1} == {2} ERR?{3}", bAcquireDone, numFileName, countAcquired, bStopAtError));
+				//if (bAcquireDone)
+				//	if (numFileName == countAcquired)
+				//		break;
+			} while ( true );  //while (!( bAcquireDone && ( numFileName == countAcquired )));
+			countAcquired = 0;
+			hres = TwainAPI.DTWAIN_ArrayDestroy(aFileNames);
+			//hres = TwainAPI.DTWAIN_CloseSourceUI(SelectedSource);
+		}*/
+
+		/*private static void ListView1Add(string sFileName)
+		{
+			Bitmap thumb = form1.GetThumbnailImage(sFileName);
+			form1.listView1.Invoke(new Action(() => form1.imageList.Images.Add(thumb)));
+			form1.listView1.Invoke(new Action(() => form1.listView1.Items.Add(Path.GetFileName(sFileName))));
+			form1.listView1.Invoke(new Action(() => form1.listView1.Items[count].ImageIndex = form1.imageList.Images.Count - 1));
+			thumb.Dispose();
+		}*/
 
 		private void cmbDSM_SelectedIndexChanged(object sender, EventArgs e)
 		{
@@ -1241,6 +1414,52 @@ namespace ScanMFC
 					toolStripDSM.Text = "DSM: Legacy";
 					break;
 			}
+		}
+
+		private void btnDeskew_Click(object sender, EventArgs e)
+		{		
+			Percentage percentage = new Percentage((int)form1.numDeskew.Value);
+
+			toolStripProgressBar1.Style = ProgressBarStyle.Marquee;
+			toolStripProgressBar1.MarqueeAnimationSpeed = 100;
+
+			List<Task> listTask = new List<Task>();
+
+			foreach (ListViewItem item in listView1.SelectedItems)
+			{
+				//for (int idx = listView1.Items.Count - 1; idx >= 0; idx--)
+				//listView1.Invoke(new Action(() => bSel = listView1.Items[idx].Selected));
+				//if (bSel)
+
+				string fileToDeskew = scanFileNames[item.ImageIndex];
+
+				Task task = new Task(() =>
+				{
+					// Выровнять криво отсканированный рисунок
+					MagickImage image = new MagickImage(fileToDeskew);
+					image.Deskew(percentage);
+					image.Write(fileToDeskew);
+					image.Dispose();
+					imageList.Images[item.ImageIndex] = GetThumbnailImage(fileToDeskew);
+				});
+				listTask.Add(task);
+
+			}
+			ThreadPool.QueueUserWorkItem(DoDeskew, listTask);
+			//listView1.Refresh();
+			//toolStripProgressBar1.Style = ProgressBarStyle.Continuous;
+			//toolStripProgressBar1.MarqueeAnimationSpeed = 0;
+		}
+
+		// Запускает задачи выравнивания рисунков в отдельном потоке и ожидает завршения всех задач
+		private void DoDeskew(object state)
+		{
+			foreach (Task t in (List<Task>)state)
+				t.Start();
+			Task.WaitAll(((List<Task>)state).ToArray());
+			listView1.Invoke(new Action(() => listView1.Refresh()));
+			form1.Invoke(new Action(() => toolStripProgressBar1.Style = ProgressBarStyle.Continuous));
+			form1.Invoke(new Action(() => toolStripProgressBar1.MarqueeAnimationSpeed = 0));
 		}
 	}
 

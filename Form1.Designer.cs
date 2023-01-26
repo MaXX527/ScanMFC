@@ -42,6 +42,7 @@
 			this.toolStripStatus = new System.Windows.Forms.ToolStripStatusLabel();
 			this.toolStripStatusLabelFilesCount = new System.Windows.Forms.ToolStripStatusLabel();
 			this.toolStripDSM = new System.Windows.Forms.ToolStripStatusLabel();
+			this.toolStripMsg = new System.Windows.Forms.ToolStripStatusLabel();
 			this.savePDFDialog = new System.Windows.Forms.SaveFileDialog();
 			this.cmbScanners = new System.Windows.Forms.ComboBox();
 			this.groupBox1 = new System.Windows.Forms.GroupBox();
@@ -57,11 +58,11 @@
 			this.trkContrast = new System.Windows.Forms.TrackBar();
 			this.trkBrightness = new System.Windows.Forms.TrackBar();
 			this.groupBox3 = new System.Windows.Forms.GroupBox();
+			this.btnDeskew = new System.Windows.Forms.Button();
 			this.lblDeskew = new System.Windows.Forms.Label();
 			this.numDeskew = new System.Windows.Forms.NumericUpDown();
 			this.cmbDSM = new System.Windows.Forms.ComboBox();
 			this.lblDSM = new System.Windows.Forms.Label();
-			this.chkDeskew = new System.Windows.Forms.CheckBox();
 			this.chkShowInterface = new System.Windows.Forms.CheckBox();
 			this.chkDeleteFiles = new System.Windows.Forms.CheckBox();
 			this.btnSelectDir = new System.Windows.Forms.Button();
@@ -82,6 +83,7 @@
 			this.dlgSelectDir = new System.Windows.Forms.FolderBrowserDialog();
 			this.dlgAddFiles = new System.Windows.Forms.OpenFileDialog();
 			this.toolTipForm1 = new System.Windows.Forms.ToolTip(this.components);
+			this.toolStripProgressBar1 = new System.Windows.Forms.ToolStripProgressBar();
 			((System.ComponentModel.ISupportInitialize)(this.trkJpegQuality)).BeginInit();
 			this.statusStrip1.SuspendLayout();
 			this.groupBox1.SuspendLayout();
@@ -203,7 +205,9 @@
 			this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.toolStripStatus,
             this.toolStripStatusLabelFilesCount,
-            this.toolStripDSM});
+            this.toolStripDSM,
+            this.toolStripMsg,
+            this.toolStripProgressBar1});
 			this.statusStrip1.Location = new System.Drawing.Point(0, 548);
 			this.statusStrip1.Name = "statusStrip1";
 			this.statusStrip1.Size = new System.Drawing.Size(799, 22);
@@ -227,6 +231,12 @@
 			this.toolStripDSM.Name = "toolStripDSM";
 			this.toolStripDSM.Size = new System.Drawing.Size(35, 17);
 			this.toolStripDSM.Text = "DSM:";
+			// 
+			// toolStripMsg
+			// 
+			this.toolStripMsg.Name = "toolStripMsg";
+			this.toolStripMsg.Size = new System.Drawing.Size(75, 17);
+			this.toolStripMsg.Text = "toolStripMsg";
 			// 
 			// cmbScanners
 			// 
@@ -374,11 +384,11 @@
 			// 
 			// groupBox3
 			// 
+			this.groupBox3.Controls.Add(this.btnDeskew);
 			this.groupBox3.Controls.Add(this.lblDeskew);
 			this.groupBox3.Controls.Add(this.numDeskew);
 			this.groupBox3.Controls.Add(this.cmbDSM);
 			this.groupBox3.Controls.Add(this.lblDSM);
-			this.groupBox3.Controls.Add(this.chkDeskew);
 			this.groupBox3.Controls.Add(this.chkShowInterface);
 			this.groupBox3.Controls.Add(this.chkDeleteFiles);
 			this.groupBox3.Controls.Add(this.btnSelectDir);
@@ -393,6 +403,16 @@
 			this.groupBox3.TabIndex = 18;
 			this.groupBox3.TabStop = false;
 			this.groupBox3.Text = "Настройки файла";
+			// 
+			// btnDeskew
+			// 
+			this.btnDeskew.Location = new System.Drawing.Point(13, 138);
+			this.btnDeskew.Name = "btnDeskew";
+			this.btnDeskew.Size = new System.Drawing.Size(130, 20);
+			this.btnDeskew.TabIndex = 11;
+			this.btnDeskew.Text = "Выровнять сканы";
+			this.btnDeskew.UseVisualStyleBackColor = true;
+			this.btnDeskew.Click += new System.EventHandler(this.btnDeskew_Click);
 			// 
 			// lblDeskew
 			// 
@@ -436,16 +456,6 @@
 			this.lblDSM.Size = new System.Drawing.Size(69, 13);
 			this.lblDSM.TabIndex = 7;
 			this.lblDSM.Text = "DSM Version";
-			// 
-			// chkDeskew
-			// 
-			this.chkDeskew.AutoSize = true;
-			this.chkDeskew.Location = new System.Drawing.Point(13, 138);
-			this.chkDeskew.Name = "chkDeskew";
-			this.chkDeskew.Size = new System.Drawing.Size(117, 17);
-			this.chkDeskew.TabIndex = 6;
-			this.chkDeskew.Text = "Выровнять сканы";
-			this.chkDeskew.UseVisualStyleBackColor = true;
 			// 
 			// chkShowInterface
 			// 
@@ -642,6 +652,12 @@
 			this.radioImageMagick.Text = "ImageMagick";
 			this.radioImageMagick.UseVisualStyleBackColor = true;
 			// 
+			// toolStripProgressBar1
+			// 
+			this.toolStripProgressBar1.Name = "toolStripProgressBar1";
+			this.toolStripProgressBar1.Size = new System.Drawing.Size(100, 16);
+			this.toolStripProgressBar1.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
+			// 
 			// Form1
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -728,7 +744,9 @@
 		private System.Windows.Forms.Label lblDSM;
 		private System.Windows.Forms.Label lblDeskew;
 		private System.Windows.Forms.NumericUpDown numDeskew;
-		private System.Windows.Forms.CheckBox chkDeskew;
+		private System.Windows.Forms.ToolStripStatusLabel toolStripMsg;
+		private System.Windows.Forms.Button btnDeskew;
+		private System.Windows.Forms.ToolStripProgressBar toolStripProgressBar1;
 	}
 }
 
