@@ -43,6 +43,7 @@
 			this.toolStripStatusLabelFilesCount = new System.Windows.Forms.ToolStripStatusLabel();
 			this.toolStripDSM = new System.Windows.Forms.ToolStripStatusLabel();
 			this.toolStripMsg = new System.Windows.Forms.ToolStripStatusLabel();
+			this.toolStripProgressBar1 = new System.Windows.Forms.ToolStripProgressBar();
 			this.savePDFDialog = new System.Windows.Forms.SaveFileDialog();
 			this.cmbScanners = new System.Windows.Forms.ComboBox();
 			this.groupBox1 = new System.Windows.Forms.GroupBox();
@@ -80,10 +81,10 @@
 			this.btnTIFF = new System.Windows.Forms.Button();
 			this.radioiTextSharp = new System.Windows.Forms.RadioButton();
 			this.radioImageMagick = new System.Windows.Forms.RadioButton();
+			this.radioTesseract = new System.Windows.Forms.RadioButton();
 			this.dlgSelectDir = new System.Windows.Forms.FolderBrowserDialog();
 			this.dlgAddFiles = new System.Windows.Forms.OpenFileDialog();
 			this.toolTipForm1 = new System.Windows.Forms.ToolTip(this.components);
-			this.toolStripProgressBar1 = new System.Windows.Forms.ToolStripProgressBar();
 			((System.ComponentModel.ISupportInitialize)(this.trkJpegQuality)).BeginInit();
 			this.statusStrip1.SuspendLayout();
 			this.groupBox1.SuspendLayout();
@@ -237,6 +238,12 @@
 			this.toolStripMsg.Name = "toolStripMsg";
 			this.toolStripMsg.Size = new System.Drawing.Size(75, 17);
 			this.toolStripMsg.Text = "toolStripMsg";
+			// 
+			// toolStripProgressBar1
+			// 
+			this.toolStripProgressBar1.Name = "toolStripProgressBar1";
+			this.toolStripProgressBar1.Size = new System.Drawing.Size(100, 16);
+			this.toolStripProgressBar1.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
 			// 
 			// cmbScanners
 			// 
@@ -524,12 +531,12 @@
 			this.tableLayoutPanel1.ColumnCount = 2;
 			this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 280F));
 			this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
-			this.tableLayoutPanel1.Controls.Add(this.flowLayoutPanel1, 1, 0);
 			this.tableLayoutPanel1.Controls.Add(this.groupBox3, 0, 2);
 			this.tableLayoutPanel1.Controls.Add(this.groupBox2, 0, 1);
 			this.tableLayoutPanel1.Controls.Add(this.listView1, 1, 1);
 			this.tableLayoutPanel1.Controls.Add(this.groupBox1, 0, 0);
 			this.tableLayoutPanel1.Controls.Add(this.button1, 0, 3);
+			this.tableLayoutPanel1.Controls.Add(this.flowLayoutPanel1, 1, 0);
 			this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.tableLayoutPanel1.Location = new System.Drawing.Point(0, 0);
 			this.tableLayoutPanel1.Name = "tableLayoutPanel1";
@@ -553,6 +560,7 @@
 			this.flowLayoutPanel1.Controls.Add(this.btnTIFF);
 			this.flowLayoutPanel1.Controls.Add(this.radioiTextSharp);
 			this.flowLayoutPanel1.Controls.Add(this.radioImageMagick);
+			this.flowLayoutPanel1.Controls.Add(this.radioTesseract);
 			this.flowLayoutPanel1.Location = new System.Drawing.Point(283, 3);
 			this.flowLayoutPanel1.Name = "flowLayoutPanel1";
 			this.flowLayoutPanel1.Size = new System.Drawing.Size(513, 56);
@@ -652,11 +660,16 @@
 			this.radioImageMagick.Text = "ImageMagick";
 			this.radioImageMagick.UseVisualStyleBackColor = true;
 			// 
-			// toolStripProgressBar1
+			// radioTesseract
 			// 
-			this.toolStripProgressBar1.Name = "toolStripProgressBar1";
-			this.toolStripProgressBar1.Size = new System.Drawing.Size(100, 16);
-			this.toolStripProgressBar1.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
+			this.radioTesseract.AutoSize = true;
+			this.radioTesseract.Location = new System.Drawing.Point(3, 37);
+			this.radioTesseract.Name = "radioTesseract";
+			this.radioTesseract.Size = new System.Drawing.Size(72, 17);
+			this.radioTesseract.TabIndex = 24;
+			this.radioTesseract.TabStop = true;
+			this.radioTesseract.Text = "Tesseract";
+			this.radioTesseract.UseVisualStyleBackColor = true;
 			// 
 			// Form1
 			// 
@@ -747,6 +760,7 @@
 		private System.Windows.Forms.ToolStripStatusLabel toolStripMsg;
 		private System.Windows.Forms.Button btnDeskew;
 		private System.Windows.Forms.ToolStripProgressBar toolStripProgressBar1;
+		private System.Windows.Forms.RadioButton radioTesseract;
 	}
 }
 

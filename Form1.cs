@@ -778,6 +778,26 @@ namespace ScanMFC
 				fileStream.Dispose();
 			}
 
+			if (radioTesseract.Checked)
+			{
+				string output = Path.GetDirectoryName(savePDFDialog.FileName) + "\\" + Path.GetFileNameWithoutExtension(savePDFDialog.FileName);
+				Tesseract.TesseractEngine tesseract = new Tesseract.TesseractEngine(@".\tessdata", "rus-fast", Tesseract.EngineMode.Default);
+				Tesseract.PdfResultRenderer renderer = new Tesseract.PdfResultRenderer(output, @"C:\windows\fonts", false);
+				renderer.BeginDocument(Path.GetFileName(savePDFDialog.FileName));
+
+				foreach (ListViewItem item in listView1.SelectedItems)
+				{
+					Tesseract.Pix pix = Tesseract.Pix.LoadFromFile(scanFileNames[item.ImageIndex]);
+					Tesseract.Page page = tesseract.Process(pix);
+					pix.Dispose();
+					renderer.AddPage(page);
+					page.Dispose();
+				}
+
+				renderer.Dispose();
+				tesseract.Dispose();
+			}
+
 			if (deleteFiles) btnDelete_Click(btnPDF, null);
 
 			Cursor.Current = Cursors.Default;
@@ -901,6 +921,8 @@ namespace ScanMFC
 			Properties.Settings.Default.Brightness = trkBrightness.Value;
 			Properties.Settings.Default.Contrast = trkContrast.Value;
 			Properties.Settings.Default.UseiTextSharp = radioiTextSharp.Checked;
+			Properties.Settings.Default.UseImageMagick = radioImageMagick.Checked;
+			Properties.Settings.Default.UseTesseract = radioTesseract.Checked;
 			Properties.Settings.Default.DeleteFiles = chkDeleteFiles.Checked;
 			Properties.Settings.Default.ShowInterface = chkShowInterface.Checked;
 			Properties.Settings.Default.DSM = cmbDSM.SelectedIndex;
@@ -931,7 +953,8 @@ namespace ScanMFC
 			trkBrightness.Value = Properties.Settings.Default.Brightness;
 			trkContrast.Value = Properties.Settings.Default.Contrast;
 			radioiTextSharp.Checked = Properties.Settings.Default.UseiTextSharp;
-			radioImageMagick.Checked = !Properties.Settings.Default.UseiTextSharp;
+			radioImageMagick.Checked = Properties.Settings.Default.UseImageMagick;
+			radioTesseract.Checked = Properties.Settings.Default.UseTesseract;
 			chkDeleteFiles.Checked = Properties.Settings.Default.DeleteFiles;
 			chkShowInterface.Checked = Properties.Settings.Default.ShowInterface;
 			cmbDSM.SelectedIndex = Properties.Settings.Default.DSM;
@@ -1451,7 +1474,7 @@ namespace ScanMFC
 			//toolStripProgressBar1.MarqueeAnimationSpeed = 0;
 		}
 
-		// Запускает задачи выравнивания рисунков в отдельном потоке и ожидает завршения всех задач
+		// Запускает задачи выравнивания рисунков в отдельном потоке и ожидает завершения всех задач
 		private void DoDeskew(object state)
 		{
 			foreach (Task t in (List<Task>)state)
@@ -1461,6 +1484,7 @@ namespace ScanMFC
 			form1.Invoke(new Action(() => toolStripProgressBar1.Style = ProgressBarStyle.Continuous));
 			form1.Invoke(new Action(() => toolStripProgressBar1.MarqueeAnimationSpeed = 0));
 		}
+
 	}
 
 	public static class ImageFormatID

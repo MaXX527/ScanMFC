@@ -104,14 +104,18 @@ namespace ScanMFC
 			float ratio = (float)image.Width / (float)rectImage.Width;
 
 			//Debug.WriteLine((image.Width / rectImage.Width).ToString() + "   " + ratio.ToString());
-			Rectangle crop = new Rectangle((int)(ratio * (rect.X - rectImage.X)), (int)(ratio * (rect.Y - rectImage.Y)), (int)(ratio * rect.Width), (int)(ratio * rect.Height));
+			//Rectangle crop = new Rectangle((int)(ratio * (rect.X - rectImage.X)), (int)(ratio * (rect.Y - rectImage.Y)), (int)(ratio * rect.Width), (int)(ratio * rect.Height));
 			//Debug.WriteLine(String.Format("crop X={0} Y={1} Width={2} Height={3}", crop.X, crop.Y, crop.Width, crop.Height));
 
-			Bitmap bmp = new Bitmap(image);
-			MagickImage magickImage = new MagickImage(bmp);
-			bmp.Dispose();
-			
-			magickImage.Crop(new MagickGeometry(crop));
+			//Bitmap bmp = new Bitmap(image);
+			MemoryStream ms = new MemoryStream();
+			image.Save(ms, ImageFormat.Jpeg);
+			//MagickImage magickImage = new MagickImage(bmp);
+			MagickImage magickImage = new MagickImage(ms.ToArray());
+			//bmp.Dispose();
+
+			//magickImage.Crop(new MagickGeometry(crop));
+			magickImage.Crop(new MagickGeometry((int)(ratio * (rect.X - rectImage.X)), (int)(ratio * (rect.Y - rectImage.Y)), (int)(ratio * rect.Width), (int)(ratio * rect.Height)));
 			magickImage.Format = MagickFormat.Jpeg;
 			magickImage.Density = new Density(image.HorizontalResolution, image.VerticalResolution);
 			magickImage.Quality = Form1.jpegQ;

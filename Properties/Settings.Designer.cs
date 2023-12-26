@@ -286,5 +286,29 @@ namespace ScanMFC.Properties {
                 this["nDeskew"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool UseImageMagick {
+            get {
+                return ((bool)(this["UseImageMagick"]));
+            }
+            set {
+                this["UseImageMagick"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool UseTesseract {
+            get {
+                return ((bool)(this["UseTesseract"]));
+            }
+            set {
+                this["UseTesseract"] = value;
+            }
+        }
     }
 }
